@@ -4,7 +4,6 @@ import os, datetime, json, io, gc
 from flask import Flask
 import threading
 
-# ========== НАСТРОЙКИ ==========
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 if not BOT_TOKEN:
     print("ОШИБКА: Не найден BOT_TOKEN")
@@ -13,7 +12,6 @@ if not BOT_TOKEN:
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 
-# ========== ШРИФТЫ ==========
 def load_font(paths):
     for p in paths:
         try:
@@ -30,7 +28,10 @@ if not REG_BUF or not BLD_BUF:
     print("ОШИБКА: Шрифты не найдены")
     exit(1)
 
-# ========== КАРТА ПОЛЕЙ ==========
+# Возвращаем объекты шрифтов для расчета ширины текста
+FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
+FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
+
 FIELDS = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
     "owner_fio":               (1, [16.0, 348.83, 230.86, 361.01], "reg",  11),
@@ -140,10 +141,9 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
                     x0, y0, x1, y1 = char_boxes[i]
                     inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char"))
             else:
-                if not spans: continue
                 r = pymupdf.Rect(rect)
-                align = 1 if key in CENTER_FIELDS else 0
-                inserts.append((r, val, fkey, size, align, "box"))
+                is_center = key in CENTER_FIELDS
+                inserts.append((r, val, fkey, size, is_center, "box"))
 
         if to_delete:
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
@@ -157,15 +157,27 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
                 x0, baseline, val, fkey, size, _ = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
                 if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
+            
             elif item[-1] == "box":
-                r, val, fkey, size, align, _ = item
+                r, val, fkey, size, is_center, _ = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
+                
+                # Ручное центрирование для надежности
+                if is_center:
+                    f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
+                    text_w = f_obj.text_length(val, fontsize=size)
+                    x_new = r.x0 + (r.width - text_w) / 2
+                    if text_w >= r.width: x_new = r.x0
+                else:
+                    x_new = r.x0
+                
+                baseline = r.y1 - 0.22 * size
                 if val:
-                    page.insert_textbox(r, val, fontname=fname, fontsize=size, color=(0,0,0), align=align)
+                    page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
 
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
     doc.close()
-    gc.collect() # Очистка памяти
+    gc.collect()
     return pdf_bytes
 
 @bot.message_handler(commands=['start'])
@@ -199,7 +211,6 @@ def handle_json(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Ошибка: {e}")
 
-# ========== ВЕБ-СЕРВЕР ДЛЯ RENDER ==========
 @app.route('/')
 def home():
     return "Bot is running!"
@@ -209,9 +220,6 @@ def run_bot():
     bot.polling(none_stop=True)
 
 if __name__ == '__main__':
-    # Запускаем бота в фоне
     threading.Thread(target=run_bot, daemon=True).start()
-    
-    # Запускаем сервер для Render
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
