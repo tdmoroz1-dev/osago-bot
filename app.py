@@ -26,65 +26,65 @@ BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
-# Расширенные рамки для стирания и заполнения
+# Общие поля (координаты специально расширены, чтобы стереть старый текст полностью)
 FIELDS = {
-    "policyholder_fio":        (1, [16.0, 306.61, 213.11, 318.79], "reg",  11),
-    "owner_fio":               (1, [16.0, 348.79, 213.11, 360.97], "reg",  11),
-    "marka":                   (1, [64.69, 402.65, 133.3, 414.83], "reg",  11),
-    "model":                   (1, [90.89, 417.65, 140.52, 429.83], "reg",  11),
-    "vin":                     (1, [201.46, 413.15, 302.75, 425.33], "reg", 11),
-    "gosnomer":                (1, [491.31, 413.15, 546.83, 425.33], "reg", 11),
-    "pts_series":              (1, [411.07, 444.77, 446.77, 452.52], "bold", 7),
-    "pts_number":              (1, [499.87, 444.77, 520.83, 452.52], "bold", 7),
+    "policyholder_fio":        (1, [16.0, 306.61, 250.0, 318.79], "reg",  11),
+    "owner_fio":               (1, [16.0, 348.79, 250.0, 360.97], "reg",  11),
+    "marka":                   (1, [64.69, 402.65, 150.0, 414.83], "reg",  11),
+    "model":                   (1, [90.89, 417.65, 160.0, 429.83], "reg",  11),
     
-    # Премия вверху
+    # Расширили рамку VIN, чтобы она перекрыла старые символы
+    "vin":                     (1, [200.0, 413.15, 350.0, 425.33], "reg", 11),
+    "gosnomer":                (1, [480.0, 413.15, 560.0, 425.33], "reg", 11),
+    
+    "pts_series":              (1, [411.07, 444.77, 446.77, 452.52], "bold", 7),
+    "pts_number":              (1, [490.0, 444.77, 530.0, 452.52], "bold", 7),
+    
+    # Верхняя премия (одна широкая рамка для рублей)
     "premium_rub":             (1, [440.0, 56.65, 500.0, 68.83],    "bold", 11),
     "premium_kop":             (1, [505.0, 56.65, 530.0, 68.83],    "bold", 11),
     
     "policy_series":           (1, [259.0, 88.47, 282.8, 100.65],    "bold", 11),
     "policy_number":           (1, [349.0, 88.47, 403.9, 100.65],    "bold", 11),
     
-    # Даты срока (одна широкая рамка на всю строку)
+    # Даты (широкие рамки для полного стирания)
     "date_start":              (1, [440.0, 187.21, 580.0, 197.18], "reg",  9),
     "date_end":                (1, [440.0, 207.21, 580.0, 217.18], "reg",  9),
-    
-    # Даты периода использования (одна широкая рамка)
     "date_period_start":       (1, [20.0, 252.21, 160.0, 262.18],    "reg",  9),
     "date_period_end":         (1, [160.0, 252.21, 300.0, 262.18],   "reg",  9),
-    
     "date_issue1":             (1, [100.0, 754.3, 145.0, 762.05],   "reg",  7),
     "date_issue2":             (1, [220.0, 754.3, 265.0, 762.05],  "reg",  7),
     
     # Объединенная нижняя строка (премия прописью + дата)
-    "footer_text":             (1, [230.0, 730.34, 560.0, 739.2],  "reg",  8),
+    "footer_text":             (1, [15.0, 730.34, 550.0, 739.2],  "reg",  8),
     
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
     
-    # Коэффициенты (рамки на всю ширину колонок)
-    "tb":                      (1, [20.0, 703.77, 70.0, 711.52],     "reg",  7),
-    "kt":                      (1, [80.0, 703.77, 130.0, 711.52],    "reg",  7),
-    "kbm":                     (1, [135.0, 703.77, 185.0, 711.52],   "reg",  7),
-    "kvs":                     (1, [190.0, 703.77, 240.0, 711.52],   "reg",  7),
-    "ko":                      (1, [245.0, 703.77, 300.0, 711.52],   "reg",  7),
-    "ks":                      (1, [305.0, 703.77, 360.0, 711.52],   "reg",  7),
-    "kp":                      (1, [365.0, 703.77, 420.0, 711.52],   "reg",  7),
-    "km":                      (1, [425.0, 703.77, 480.0, 711.52],   "reg",  7),
-    "premium_total_thousands": (1, [485.0, 703.77, 520.0, 711.52],   "reg",  7),
-    "premium_total_kop":       (1, [520.0, 703.77, 565.0, 711.52],   "reg",  7),
+    # Коэффициенты (по твоим новым координатам)
+    "tb":                      (1, [30.0, 703.77, 60.0, 711.52],     "reg",  7),
+    "kt":                      (1, [85.0, 703.77, 125.0, 711.52],    "reg",  7),
+    "kbm":                     (1, [140.0, 703.77, 175.0, 711.52],   "reg",  7),
+    "kvs":                     (1, [195.0, 703.77, 235.0, 711.52],   "reg",  7),
+    "ko":                      (1, [255.0, 703.77, 295.0, 711.52],   "reg",  7),
+    "ks":                      (1, [315.0, 703.77, 350.0, 711.52],   "reg",  7),
+    "kp":                      (1, [370.0, 703.77, 410.0, 711.52],   "reg",  7),
+    "km":                      (1, [430.0, 703.77, 470.0, 711.52],   "reg",  7),
+    
+    # Итого - ОДНА ШИРОКАЯ РАМКА (чтобы сумма не разлеталась)
+    "premium_total":           (1, [485.0, 703.77, 565.0, 711.52],   "reg",  7),
 }
 
 CENTER_FIELDS = {
     "premium_rub", "premium_kop", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
-    "premium_total_thousands", "premium_total_kop", "trailer_new_x",
-    "policy_series", "policy_number"
+    "premium_total", "trailer_new_x", "policy_series", "policy_number"
 }
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
 LIMITED_CHECKBOX = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
 UNLIMITED_CHECKBOX = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
 
-# Точные координаты водителей (сдвинуты вниз, чтобы не липли к верху)
+# Точные координаты водителей
 DRIVER_FIELDS = [
     (1, [30.0, 555.9, 340.0, 563.65], "driver1_fio", "reg", 7, False),
     (1, [340.0, 555.9, 480.0, 563.65], "driver1_license", "reg", 7, False),
@@ -123,12 +123,11 @@ def fill_pdf_to_memory(data):
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
     end_date = next_year - datetime.timedelta(days=1)
     
-    # Формируем строки с пробелами для дат
+    # Даты с пробелами
     d_start = " ".join(list(today.strftime("%d.%m.%Y")))
     d_end = " ".join(list(end_date.strftime("%d.%m.%Y")))
-    d_issue = today.strftime("%d.%m.%Y")
     
-    # Собираем премию
+    # УМНАЯ СБОРКА ПРЕМИИ (берет total, если есть)
     total_str = str(data.get("premium_total_thousands", "")) + str(data.get("premium_total_kop", ""))
     if "." in total_str:
         rub_str, kop_str = total_str.split(".")
@@ -136,11 +135,16 @@ def fill_pdf_to_memory(data):
         rub_str = str(data.get("premium_thousands", "")) + str(data.get("premium_hundreds", ""))
         kop_str = str(data.get("premium_kop", ""))
     
+    # Форматируем "9873.86"
+    if len(kop_str) == 1: kop_str = "0" + kop_str
+    if len(kop_str) > 2: kop_str = kop_str[:2]
+
     data["premium_rub"] = rub_str
     data["premium_kop"] = kop_str
+    data["premium_total"] = f"{rub_str}.{kop_str}"
     
-    # Формируем нижнюю строку целиком
-    data["footer_text"] = f"{rub_str} {kop_str} рублей {kop_str} копеек. Дата оформления: {today.strftime('%d.%m.%Y 00:00:00 UTC+03:00.')}"
+    # Нижняя строка целиком
+    data["footer_text"] = f"ТС в режиме использования такси не подлежит. Страховая премия: {rub_str} рублей {kop_str} копеек. Дата оформления: {today.strftime('%d.%m.%Y 00:00:00 UTC+03:00.')}"
 
     all_fields = dict(FIELDS)
     all_fields["limited_checkbox"] = LIMITED_CHECKBOX
@@ -148,9 +152,8 @@ def fill_pdf_to_memory(data):
     data["limited_checkbox"] = "X" if is_limited else ""
     data["unlimited_checkbox"] = "" if is_limited else "X"
     
-    # Добавляем водителей
     if is_limited:
-        for i, driver in enumerate(drivers[:3]): # Бот поддерживает до 3 водителей
+        for i, driver in enumerate(drivers[:3]):
             idx = i + 1
             data[f"driver{idx}_fio"] = driver.get("fio", "")
             data[f"driver{idx}_license"] = driver.get("license", "")
@@ -187,17 +190,14 @@ def fill_pdf_to_memory(data):
             if spans:
                 for sp in spans: to_delete.append(sp["bbox"])
             
-            # Подменяем значения для дат перед вставкой
-            if key == "date_start" or key == "date_period_start":
-                val = d_start
-            elif key == "date_end" or key == "date_period_end":
-                val = d_end
+            if key in ["date_start", "date_period_start"]: val = d_start
+            elif key in ["date_end", "date_period_end"]: val = d_end
             
             r = pymupdf.Rect(rect)
             is_center = key in CENTER_FIELDS
             inserts.append((r, val, fkey, size, is_center, "box"))
 
-        # Применяем очистку старых данных
+        # Стираем старый текст с запасом
         if to_delete:
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
             page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
@@ -205,7 +205,6 @@ def fill_pdf_to_memory(data):
         page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
-        # Вставляем новый текст
         for r, val, fkey, size, is_center, _ in inserts:
             fname = "tnewb" if fkey == "bold" else "tnew"
             
@@ -217,7 +216,6 @@ def fill_pdf_to_memory(data):
             else:
                 x_new = r.x0
                 
-            # Немного опускаем базовую линию для лучшего центрирования по вертикали
             baseline = r.y1 - 0.18 * size
             
             if val: 
