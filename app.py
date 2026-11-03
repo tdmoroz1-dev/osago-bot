@@ -51,7 +51,6 @@ FIELDS = {
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
     "premium_in_words":        (1, [245.54, 730.34, 398.75, 739.2],  "reg",  8),
-    
     "tb":                      (1, [26.0, 703.77, 60.0, 711.52],     "reg",  7),
     "kt":                      (1, [88.0, 703.77, 120.0, 711.52],    "reg",  7),
     "kbm":                     (1, [143.0, 703.77, 174.0, 711.52],   "reg",  7),
@@ -60,8 +59,6 @@ FIELDS = {
     "ks":                      (1, [315.0, 703.77, 349.0, 711.52],   "reg",  7),
     "kp":                      (1, [373.0, 703.77, 407.0, 711.52],   "reg",  7),
     "km":                      (1, [428.0, 703.77, 465.0, 711.52],   "reg",  7),
-    
-    # НОВОЕ ЕДИНОЕ ПОЛЕ ДЛЯ ИТОГО (ШИРОКОЕ, ЧТОБЫ ЦИФРЫ НЕ НАЛЕЗАЛИ)
     "premium_total":           (1, [500.0, 703.77, 560.0, 711.52],   "reg",  7),
 }
 
@@ -69,7 +66,7 @@ CENTER_FIELDS = {
     "premium_thousands", "premium_hundreds", "premium_kop",
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
     "trailer_new_x", "policy_series", "policy_number",
-    "premium_total" # <--- ИТОГО ТЕПЕРЬ ТОЖЕ ЦЕНТРИРУЕТСЯ
+    "premium_total"
 }
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
@@ -104,7 +101,6 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
     data["date_design_1"] = today.strftime("%d.%m.")
     data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
 
-    # Собираем правильное "Итого" из частей
     total_rub = str(data.get("premium_total_thousands", "")).strip()
     if not total_rub:
         total_rub = str(data.get("premium_thousands", "")).strip() + str(data.get("premium_hundreds", "")).strip()
@@ -117,6 +113,9 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
         data["premium_total"] = f"{total_rub}.{total_kop}"
     else:
         data["premium_total"] = total_rub
+
+    # ВОЗВРАЩАЕМ СУММУ ПРОПИСЬЮ
+    data["premium_in_words"] = f"{total_rub} рублей {total_kop} копеек. Дата оформления:"
 
     by_page = {}
     for key, (pno, rect, fkey, size) in FIELDS.items():
@@ -192,9 +191,6 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
     gc.collect()
     return pdf_bytes
 
-# =========================================================================
-# ФУНКЦИЯ ДЛЯ ОГРАНИЧЕННОГО (ОТДЕЛЬНО)
-# =========================================================================
 def fill_limited_pdf_to_memory(data):
     doc = pymupdf.open("template.pdf")
     
@@ -212,7 +208,6 @@ def fill_limited_pdf_to_memory(data):
     data["date_design_1"] = today.strftime("%d.%m.")
     data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
 
-    # Собираем "Итого"
     total_rub = str(data.get("premium_total_thousands", "")).strip()
     if not total_rub:
         total_rub = str(data.get("premium_thousands", "")).strip() + str(data.get("premium_hundreds", "")).strip()
@@ -226,15 +221,16 @@ def fill_limited_pdf_to_memory(data):
     else:
         data["premium_total"] = total_rub
 
+    # ВОЗВРАЩАЕМ СУММУ ПРОПИСЬЮ
+    data["premium_in_words"] = f"{total_rub} рублей {total_kop} копеек. Дата оформления:"
+
     all_fields = dict(FIELDS)
     
-    # Галочки
     all_fields["limited_checkbox"] = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
     all_fields["unlimited_checkbox"] = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
     data["limited_checkbox"] = "X"
     data["unlimited_checkbox"] = ""
 
-    # Водители
     drivers = data.get("drivers", [])
     driver_fields = [
         (1, [30.0, 555.9, 340.0, 563.65], "driver1_fio", "reg", 7),
@@ -342,7 +338,6 @@ def fill_limited_pdf_to_memory(data):
     doc.close()
     gc.collect()
     return pdf_bytes
-
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
