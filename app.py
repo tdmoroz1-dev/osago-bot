@@ -26,7 +26,7 @@ BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
-# Общие поля для обоих бланков
+# Общие поля (координаты подправлены для устранения наложений)
 COMMON_FIELDS = {
     "policyholder_fio":        (1, [16.0, 306.61, 213.11, 318.79], "reg",  11),
     "owner_fio":               (1, [16.0, 348.79, 213.11, 360.97], "reg",  11),
@@ -36,9 +36,11 @@ COMMON_FIELDS = {
     "gosnomer":                (1, [491.31, 413.15, 546.83, 425.33], "reg", 11),
     "pts_series":              (1, [411.07, 444.77, 446.77, 452.52], "bold", 7),
     "pts_number":              (1, [499.87, 444.77, 520.83, 452.52], "bold", 7),
-    "premium_thousands":       (1, [452.24, 56.65, 463.22, 68.83],   "bold", 11),
-    "premium_hundreds":        (1, [463.22, 56.65, 482.47, 68.83],   "bold", 11),
-    "premium_kop":             (1, [514.5, 56.65, 525.5, 68.83],     "bold", 11),
+    
+    # Премия сверху: теперь рубли объединены в одну строку
+    "premium_rub":             (1, [450.0, 56.65, 500.0, 68.83],    "bold", 11),
+    "premium_kop":             (1, [510.0, 56.65, 525.5, 68.83],    "bold", 11),
+    
     "policy_series":           (1, [259.0, 88.47, 282.8, 100.65],    "bold", 11),
     "policy_number":           (1, [349.0, 88.47, 403.9, 100.65],    "bold", 11),
     "date_start":              (1, [444.75, 187.21, 563.25, 197.18], "reg",  9),
@@ -52,6 +54,7 @@ COMMON_FIELDS = {
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
     "premium_in_words":        (1, [245.54, 730.34, 398.75, 739.2],  "reg",  8),
+    
     "tb":                      (1, [26.0, 703.77, 60.0, 711.52],     "reg",  7),
     "kt":                      (1, [88.0, 703.77, 120.0, 711.52],    "reg",  7),
     "kbm":                     (1, [143.0, 703.77, 174.0, 711.52],   "reg",  7),
@@ -60,43 +63,42 @@ COMMON_FIELDS = {
     "ks":                      (1, [315.0, 703.77, 349.0, 711.52],   "reg",  7),
     "kp":                      (1, [373.0, 703.77, 407.0, 711.52],   "reg",  7),
     "km":                      (1, [428.0, 703.77, 465.0, 711.52],   "reg",  7),
-    "premium_total_thousands": (1, [516.49, 703.77, 523.48, 711.52], "reg",  7),
-    "premium_total_kop":       (1, [523.47, 703.77, 544.47, 711.52], "reg",  7),
+    
+    # Итого: теперь тоже одна широкая строка
+    "premium_total":           (1, [490.0, 703.77, 560.0, 711.52],   "reg",  7),
 }
 
 CENTER_FIELDS = {
-    "premium_thousands", "premium_hundreds", "premium_kop",
-    "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
-    "premium_total_thousands", "premium_total_kop", "trailer_new_x",
-    "policy_series", "policy_number"
+    "premium_rub", "premium_kop", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
+    "premium_total", "trailer_new_x", "policy_series", "policy_number"
 }
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
-# Координаты для галочек и водителей
 LIMITED_CHECKBOX = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
 UNLIMITED_CHECKBOX = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
 
+# Таблица водителей (рамки расширены на всю ширину ячеек)
 DRIVER_FIELDS = [
     # Ряд 1
-    (1, [158.03, 555.9, 216.31, 563.65], "driver1_fio", "reg", 7, False),
-    (1, [373.24, 555.75, 412.29, 563.5], "driver1_license", "reg", 7, False),
-    (1, [512.22, 555.9, 523.88, 563.65], "driver1_kbm", "reg", 7, True),
+    (1, [35.0, 555.9, 330.0, 563.65], "driver1_fio", "reg", 7, False),
+    (1, [350.0, 555.75, 480.0, 563.5], "driver1_license", "reg", 7, False),
+    (1, [495.0, 555.9, 560.0, 563.65], "driver1_kbm", "reg", 7, True),
     # Ряд 2
-    (1, [158.03, 567.27, 216.31, 575.02], "driver2_fio", "reg", 7, False),
-    (1, [373.48, 567.27, 412.53, 575.02], "driver2_license", "reg", 7, False),
-    (1, [512.67, 567.27, 524.33, 575.02], "driver2_kbm", "reg", 7, True),
+    (1, [35.0, 567.27, 330.0, 575.02], "driver2_fio", "reg", 7, False),
+    (1, [350.0, 567.27, 480.0, 575.02], "driver2_license", "reg", 7, False),
+    (1, [495.0, 567.27, 560.0, 575.02], "driver2_kbm", "reg", 7, True),
     # Ряд 3
-    (1, [158.86, 577.27, 217.13, 585.02], "driver3_fio", "reg", 7, False),
-    (1, [373.48, 577.27, 412.53, 585.02], "driver3_license", "reg", 7, False),
-    (1, [512.67, 577.27, 524.33, 585.02], "driver3_kbm", "reg", 7, True),
+    (1, [35.0, 577.27, 330.0, 585.02], "driver3_fio", "reg", 7, False),
+    (1, [350.0, 577.27, 480.0, 585.02], "driver3_license", "reg", 7, False),
+    (1, [495.0, 577.27, 560.0, 585.02], "driver3_kbm", "reg", 7, True),
     # Ряд 4
-    (1, [158.86, 587.27, 217.13, 595.02], "driver4_fio", "reg", 7, False),
-    (1, [373.48, 587.27, 412.53, 595.02], "driver4_license", "reg", 7, False),
-    (1, [512.67, 587.27, 524.33, 595.02], "driver4_kbm", "reg", 7, True),
+    (1, [35.0, 587.27, 330.0, 595.02], "driver4_fio", "reg", 7, False),
+    (1, [350.0, 587.27, 480.0, 595.02], "driver4_license", "reg", 7, False),
+    (1, [495.0, 587.27, 560.0, 595.02], "driver4_kbm", "reg", 7, True),
     # Ряд 5
-    (1, [158.86, 597.27, 217.13, 605.02], "driver5_fio", "reg", 7, False),
-    (1, [373.48, 597.27, 412.53, 605.02], "driver5_license", "reg", 7, False),
-    (1, [512.67, 597.27, 524.33, 605.02], "driver5_kbm", "reg", 7, True),
+    (1, [35.0, 597.27, 330.0, 605.02], "driver5_fio", "reg", 7, False),
+    (1, [350.0, 597.27, 480.0, 605.02], "driver5_license", "reg", 7, False),
+    (1, [495.0, 597.27, 560.0, 605.02], "driver5_kbm", "reg", 7, True),
 ]
 
 def is_inside(inner, outer):
@@ -117,11 +119,9 @@ def fill_pdf_to_memory(data):
     drivers = data.get("drivers", [])
     is_limited = len(drivers) > 0
     
-    # Выбираем шаблон
     template_name = "template_limited.pdf" if is_limited else "template.pdf"
     doc = pymupdf.open(template_name)
     
-    # Авто-даты
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
@@ -136,16 +136,16 @@ def fill_pdf_to_memory(data):
     data["date_design_1"] = today.strftime("%d.%m.")
     data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
 
-    # Собираем все поля для заполнения
+    # Объединяем премию в одну строку
+    data["premium_rub"] = str(data.get("premium_thousands", "")) + str(data.get("premium_hundreds", ""))
+    data["premium_total"] = str(data.get("premium_total_thousands", "")) + str(data.get("premium_total_kop", ""))
+
     all_fields = dict(COMMON_FIELDS)
-    
-    # Добавляем галочки
     all_fields["limited_checkbox"] = LIMITED_CHECKBOX
     all_fields["unlimited_checkbox"] = UNLIMITED_CHECKBOX
     data["limited_checkbox"] = "X" if is_limited else ""
     data["unlimited_checkbox"] = "" if is_limited else "X"
     
-    # Добавляем данные водителей, если это ограниченный полис
     if is_limited:
         for i, driver in enumerate(drivers[:5]):
             idx = i + 1
@@ -159,15 +159,13 @@ def fill_pdf_to_memory(data):
 
         for df in DRIVER_FIELDS:
             all_fields[df[2]] = (df[0], df[1], df[3], df[4])
-            if df[5]:  # Если нужно центрировать
-                CENTER_FIELDS.add(df[2])
+            if df[5]: CENTER_FIELDS.add(df[2])
 
     by_page = {}
     for key, (pno, rect, fkey, size) in all_fields.items():
         if key not in data: continue
         val = str(data[key]).strip()
         
-        # Автоформат для коэффициентов
         if key in DECIMAL_FIELDS:
             try: val = f"{float(val):.2f}"
             except: pass
@@ -199,7 +197,7 @@ def fill_pdf_to_memory(data):
                 for i, ch in enumerate(clean_val):
                     if i >= len(char_boxes): break
                     x0, y0, x1, y1 = char_boxes[i]
-                    inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char"))
+                    inserts.append((x0, y1 - 0.18 * size, ch, fkey, size, "char")) # Сдвинул чуть выше
             else:
                 r = pymupdf.Rect(rect)
                 is_center = key in CENTER_FIELDS
@@ -226,11 +224,11 @@ def fill_pdf_to_memory(data):
                     f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
                     text_w = f_obj.text_length(val, fontsize=size)
                     x_new = r.x0 + (r.width - text_w) / 2
-                    if text_w >= r.width: x_new = r.x0
+                    if text_w >= r.width: x_new = r.x0 # Если не влезает, прижимаем влево
                 else:
                     x_new = r.x0
                     
-                baseline = r.y1 - 0.22 * size
+                baseline = r.y1 - 0.18 * size # Немного поднял текст
                 if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
 
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
