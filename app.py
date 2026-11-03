@@ -26,9 +26,6 @@ BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
-# =========================================================================
-# ТВОЙ РАБОЧИЙ КОД ДЛЯ НЕОГРАНИЧЕННОГО ПОЛИСА (Я ЕГО НЕ ТРОГАЛ)
-# =========================================================================
 FIELDS = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
     "owner_fio":               (1, [16.0, 348.83, 230.86, 361.01], "reg",  11),
@@ -54,6 +51,7 @@ FIELDS = {
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
     "premium_in_words":        (1, [245.54, 730.34, 398.75, 739.2],  "reg",  8),
+    
     "tb":                      (1, [26.0, 703.77, 60.0, 711.52],     "reg",  7),
     "kt":                      (1, [88.0, 703.77, 120.0, 711.52],    "reg",  7),
     "kbm":                     (1, [143.0, 703.77, 174.0, 711.52],   "reg",  7),
@@ -62,14 +60,16 @@ FIELDS = {
     "ks":                      (1, [315.0, 703.77, 349.0, 711.52],   "reg",  7),
     "kp":                      (1, [373.0, 703.77, 407.0, 711.52],   "reg",  7),
     "km":                      (1, [428.0, 703.77, 465.0, 711.52],   "reg",  7),
-    "premium_total_thousands": (1, [516.49, 703.77, 523.48, 711.52], "reg",  7),
-    "premium_total_kop":       (1, [523.47, 703.77, 544.47, 711.52], "reg",  7),
+    
+    # НОВОЕ ЕДИНОЕ ПОЛЕ ДЛЯ ИТОГО (ШИРОКОЕ, ЧТОБЫ ЦИФРЫ НЕ НАЛЕЗАЛИ)
+    "premium_total":           (1, [500.0, 703.77, 560.0, 711.52],   "reg",  7),
 }
 
 CENTER_FIELDS = {
     "premium_thousands", "premium_hundreds", "premium_kop",
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
-    "trailer_new_x", "policy_series", "policy_number"
+    "trailer_new_x", "policy_series", "policy_number",
+    "premium_total" # <--- ИТОГО ТЕПЕРЬ ТОЖЕ ЦЕНТРИРУЕТСЯ
 }
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
@@ -103,6 +103,20 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
     data["date_issue2"] = data["date_start"]
     data["date_design_1"] = today.strftime("%d.%m.")
     data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
+
+    # Собираем правильное "Итого" из частей
+    total_rub = str(data.get("premium_total_thousands", "")).strip()
+    if not total_rub:
+        total_rub = str(data.get("premium_thousands", "")).strip() + str(data.get("premium_hundreds", "")).strip()
+    total_kop = str(data.get("premium_total_kop", "")).strip()
+    if not total_kop:
+        total_kop = str(data.get("premium_kop", "")).strip()
+    
+    if total_rub and total_kop:
+        if len(total_kop) == 1: total_kop = "0" + total_kop
+        data["premium_total"] = f"{total_rub}.{total_kop}"
+    else:
+        data["premium_total"] = total_rub
 
     by_page = {}
     for key, (pno, rect, fkey, size) in FIELDS.items():
@@ -179,10 +193,9 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
     return pdf_bytes
 
 # =========================================================================
-# НОВАЯ ФУНКЦИЯ ДЛЯ ОГРАНИЧЕННОГО ПОЛИСА (ОТДЕЛЬНО)
+# ФУНКЦИЯ ДЛЯ ОГРАНИЧЕННОГО (ОТДЕЛЬНО)
 # =========================================================================
 def fill_limited_pdf_to_memory(data):
-    # Работаем с тем же самым бланком template.pdf
     doc = pymupdf.open("template.pdf")
     
     today = datetime.date.today()
@@ -199,18 +212,29 @@ def fill_limited_pdf_to_memory(data):
     data["date_design_1"] = today.strftime("%d.%m.")
     data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
 
-    # Берем копию словаря полей и добавляем туда водителей
+    # Собираем "Итого"
+    total_rub = str(data.get("premium_total_thousands", "")).strip()
+    if not total_rub:
+        total_rub = str(data.get("premium_thousands", "")).strip() + str(data.get("premium_hundreds", "")).strip()
+    total_kop = str(data.get("premium_total_kop", "")).strip()
+    if not total_kop:
+        total_kop = str(data.get("premium_kop", "")).strip()
+    
+    if total_rub and total_kop:
+        if len(total_kop) == 1: total_kop = "0" + total_kop
+        data["premium_total"] = f"{total_rub}.{total_kop}"
+    else:
+        data["premium_total"] = total_rub
+
     all_fields = dict(FIELDS)
     
-    # Координаты для галочки "ограниченный" (вместо неограниченного)
+    # Галочки
     all_fields["limited_checkbox"] = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
-    data["limited_checkbox"] = "X"
-    
-    # Очищаем галочку неограниченного
     all_fields["unlimited_checkbox"] = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
+    data["limited_checkbox"] = "X"
     data["unlimited_checkbox"] = ""
 
-    # Добавляем водителей (первые 3, т.к. в шаблоне основные строки)
+    # Водители
     drivers = data.get("drivers", [])
     driver_fields = [
         (1, [30.0, 555.9, 340.0, 563.65], "driver1_fio", "reg", 7),
@@ -238,7 +262,6 @@ def fill_limited_pdf_to_memory(data):
     for df in driver_fields:
         all_fields[df[2]] = (df[0], df[1], df[3], df[4])
 
-    # Проходим по всем полям и стираем старое, вставляем новое
     by_page = {}
     for key, (pno, rect, fkey, size) in all_fields.items():
         if key not in data: continue
@@ -262,7 +285,6 @@ def fill_limited_pdf_to_memory(data):
                 if spans:
                     for sp in spans: to_delete.append(sp["bbox"])
                 if val: 
-                    # Центрируем крестик
                     inserts.append((r, val, fkey, size, True, "box"))
                 continue
 
@@ -341,7 +363,6 @@ def handle_json(message):
         data["trailer_old_x"] = "Х"
         data["trailer_new_x"] = ""
 
-    # Проверяем, есть ли реальные водители в JSON
     drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
     
     if drivers:
