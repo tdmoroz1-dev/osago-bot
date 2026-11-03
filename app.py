@@ -26,14 +26,20 @@ BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
-# ИСПОЛЬЗУЕМ ТОЛЬКО ОДИН ШАБЛОН - БЕЗОШИБОЧНЫЙ template.pdf
 FIELDS = {
-    "policyholder_fio":        (1, [16.0, 306.61, 250.0, 318.79], "reg",  11),
-    "owner_fio":               (1, [16.0, 348.79, 250.0, 360.97], "reg",  11),
-    "marka":                   (1, [64.69, 402.65, 150.0, 414.83], "reg",  11),
-    "model":                   (1, [90.89, 417.65, 160.0, 429.83], "reg",  11),
-    "vin":                     (1, [195.0, 413.15, 350.0, 425.33], "reg", 11),
-    "gosnomer":                (1, [480.0, 413.15, 560.0, 425.33], "reg", 11),
+    # Сдвинули x0 с 16 на 22 (отступ от края)
+    "policyholder_fio":        (1, [22.0, 306.61, 250.0, 318.79], "reg",  11),
+    "owner_fio":               (1, [22.0, 348.79, 250.0, 360.97], "reg",  11),
+    
+    # Сдвинули марку и модель вправо
+    "marka":                   (1, [75.0, 402.65, 150.0, 414.83], "reg",  11),
+    "model":                   (1, [85.0, 417.65, 160.0, 429.83], "reg",  11),
+    
+    # ВИН и Госномер
+    "vin":                     (1, [200.0, 413.15, 345.0, 425.33], "reg", 11),
+    "gosnomer":                (1, [485.0, 413.15, 560.0, 425.33], "reg", 11),
+    
+    # ПТС
     "pts_series":              (1, [405.0, 444.77, 450.0, 452.52], "bold", 7),
     "pts_number":              (1, [490.0, 444.77, 530.0, 452.52], "bold", 7),
     
@@ -49,7 +55,6 @@ FIELDS = {
     "date_issue1":             (1, [100.0, 754.3, 145.0, 762.05],   "reg",  7),
     "date_issue2":             (1, [220.0, 754.3, 265.0, 762.05],  "reg",  7),
     "footer_text":             (1, [15.0, 730.34, 550.0, 739.2],  "reg",  8),
-    
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
     
@@ -64,27 +69,28 @@ FIELDS = {
     "premium_total":           (1, [480.0, 703.77, 570.0, 711.52],   "reg",  7),
 }
 
+# ДОБАВИЛИ ВИН, ГОСНОМЕР И ПТС В СПИСОК ДЛЯ ЦЕНТРИРОВАНИЯ
 CENTER_FIELDS = {
     "premium_rub", "premium_kop", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
-    "premium_total", "trailer_new_x", "policy_series", "policy_number"
+    "premium_total", "trailer_new_x", "policy_series", "policy_number",
+    "vin", "gosnomer", "pts_series", "pts_number"
 }
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
-# Координаты галочек (из твоего template.pdf)
 LIMITED_CHECKBOX = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
 UNLIMITED_CHECKBOX = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
 
-# Координаты для водителей на основе прочерков из template.pdf
+# КООРДИНАТЫ ВОДИТЕЛЕЙ СДВИНУТЫ, А ЦЕНТРИРОВАНИЕ ВКЛЮЧЕНО (True)
 DRIVER_FIELDS = [
-    (1, [35.0, 552.0, 340.0, 566.0], "driver1_fio", "reg", 7, False),
-    (1, [355.0, 552.0, 480.0, 566.0], "driver1_license", "reg", 7, False),
-    (1, [490.0, 552.0, 560.0, 566.0], "driver1_kbm", "reg", 7, True),
-    (1, [35.0, 565.0, 340.0, 577.0], "driver2_fio", "reg", 7, False),
-    (1, [355.0, 565.0, 480.0, 577.0], "driver2_license", "reg", 7, False),
-    (1, [490.0, 565.0, 560.0, 577.0], "driver2_kbm", "reg", 7, True),
-    (1, [35.0, 575.0, 340.0, 587.0], "driver3_fio", "reg", 7, False),
-    (1, [355.0, 575.0, 480.0, 587.0], "driver3_license", "reg", 7, False),
-    (1, [490.0, 575.0, 560.0, 587.0], "driver3_kbm", "reg", 7, True),
+    (1, [25.0, 552.0, 340.0, 566.0], "driver1_fio", "reg", 7, True),
+    (1, [350.0, 552.0, 480.0, 566.0], "driver1_license", "reg", 7, True),
+    (1, [485.0, 552.0, 560.0, 566.0], "driver1_kbm", "reg", 7, True),
+    (1, [25.0, 565.0, 340.0, 577.0], "driver2_fio", "reg", 7, True),
+    (1, [350.0, 565.0, 480.0, 577.0], "driver2_license", "reg", 7, True),
+    (1, [485.0, 565.0, 560.0, 577.0], "driver2_kbm", "reg", 7, True),
+    (1, [25.0, 575.0, 340.0, 587.0], "driver3_fio", "reg", 7, True),
+    (1, [350.0, 575.0, 480.0, 587.0], "driver3_license", "reg", 7, True),
+    (1, [485.0, 575.0, 560.0, 587.0], "driver3_kbm", "reg", 7, True),
 ]
 
 def is_inside(inner, outer):
@@ -105,7 +111,6 @@ def fill_pdf_to_memory(data):
     drivers = data.get("drivers", [])
     is_limited = len(drivers) > 0
     
-    # ВСЕГДА ИСПОЛЬЗУЕМ ОДИН ШАБЛОН!
     doc = pymupdf.open("template.pdf")
     
     today = datetime.date.today()
@@ -135,7 +140,6 @@ def fill_pdf_to_memory(data):
     all_fields["limited_checkbox"] = LIMITED_CHECKBOX
     all_fields["unlimited_checkbox"] = UNLIMITED_CHECKBOX
     
-    # Ставим крестики в зависимости от того, ограниченный полис или нет
     data["limited_checkbox"] = "X" if is_limited else ""
     data["unlimited_checkbox"] = "" if is_limited else "X"
     
@@ -181,7 +185,6 @@ def fill_pdf_to_memory(data):
                 is_center = key in CENTER_FIELDS
                 inserts.append((r, val, fkey, size, is_center, "box"))
             else:
-                # Если значение пустое (убираем крестик), то ищем и стираем его
                 if key in ["trailer_old_x", "unlimited_checkbox", "limited_checkbox"]:
                     spans = collect_spans(page, r)
                     if spans:
