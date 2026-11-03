@@ -26,67 +26,56 @@ BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
-# Общие рамки
+# РАСШИРЕННЫЕ КООРДИНАТЫ ДЛЯ ИДЕАЛЬНОГО ЦЕНТРИРОВАНИЯ
 FIELDS = {
-    "policyholder_fio":        (1, [15.0, 306.61, 250.0, 318.79], "reg",  11),
-    "owner_fio":               (1, [15.0, 348.79, 250.0, 360.97], "reg",  11),
-    "marka":                   (1, [50.0, 402.65, 150.0, 414.83], "reg",  11),
-    "model":                   (1, [50.0, 417.65, 160.0, 429.83], "reg",  11),
-    "vin":                     (1, [180.0, 413.15, 330.0, 425.33], "reg", 11),
-    "gosnomer":                (1, [450.0, 413.15, 570.0, 425.33], "reg", 11),
-    "pts_series":              (1, [380.0, 444.77, 450.0, 452.52], "bold", 7),
-    "pts_number":              (1, [470.0, 444.77, 540.0, 452.52], "bold", 7),
-    "premium_rub":             (1, [440.0, 56.65, 500.0, 68.83],    "bold", 11),
-    "premium_kop":             (1, [505.0, 56.65, 530.0, 68.83],    "bold", 11),
+    "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
+    "owner_fio":               (1, [16.0, 348.83, 230.86, 361.01], "reg",  11),
+    "marka":                   (1, [64.69, 402.65, 133.3, 414.83], "reg",  11),
+    "model":                   (1, [90.89, 417.65, 140.52, 429.83], "reg",  11),
+    "vin":                     (1, [201.46, 413.15, 302.75, 425.33], "reg", 11),
+    "gosnomer":                (1, [491.31, 413.15, 546.83, 425.33], "reg", 11),
+    "pts_series":              (1, [411.07, 444.77, 446.77, 452.52], "bold", 7),
+    "pts_number":              (1, [499.87, 444.77, 520.83, 452.52], "bold", 7),
+    "premium_thousands":       (1, [452.24, 56.65, 463.22, 68.83],   "bold", 11),
+    "premium_hundreds":        (1, [463.22, 56.65, 482.47, 68.83],   "bold", 11),
+    "premium_kop":             (1, [514.5, 56.65, 525.5, 68.83],     "bold", 11),
     "policy_series":           (1, [259.0, 88.47, 282.8, 100.65],    "bold", 11),
     "policy_number":           (1, [349.0, 88.47, 403.9, 100.65],    "bold", 11),
-    "date_issue1":             (1, [90.0, 754.3, 150.0, 762.05],   "reg",  7),
-    "date_issue2":             (1, [200.0, 754.3, 280.0, 762.05],  "reg",  7),
-    "footer_text":             (1, [15.0, 730.34, 560.0, 739.2],  "reg",  8),
+    "date_start":              (1, [444.75, 187.21, 563.25, 197.18], "reg",  9),
+    "date_end":                (1, [444.75, 207.21, 563.25, 217.18], "reg",  9),
+    "date_period_start":       (1, [30.0, 252.21, 145.0, 262.18],    "reg",  9),
+    "date_period_end":         (1, [165.0, 252.21, 285.0, 262.18],   "reg",  9),
+    "date_issue1":             (1, [107.0, 754.3, 138.47, 762.05],   "reg",  7),
+    "date_issue2":             (1, [228.99, 754.3, 260.46, 762.05],  "reg",  7),
+    "date_design_1":           (1, [398.75, 730.34, 418.71, 739.2],  "reg",  8),
+    "date_design_2":           (1, [418.7, 730.34, 507.84, 739.2],   "reg",  8),
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
+    "premium_in_words":        (1, [245.54, 730.34, 398.75, 739.2],  "reg",  8),
     
-    # Коэффициенты
-    "tb":                      (1, [20.0, 703.77, 70.0, 711.52],     "reg",  7),
-    "kt":                      (1, [80.0, 703.77, 130.0, 711.52],    "reg",  7),
-    "kbm":                     (1, [135.0, 703.77, 185.0, 711.52],   "reg",  7),
-    "kvs":                     (1, [190.0, 703.77, 240.0, 711.52],   "reg",  7),
-    "ko":                      (1, [245.0, 703.77, 300.0, 711.52],   "reg",  7),
-    "ks":                      (1, [305.0, 703.77, 360.0, 711.52],   "reg",  7),
-    "kp":                      (1, [365.0, 703.77, 420.0, 711.52],   "reg",  7),
-    "km":                      (1, [425.0, 703.77, 480.0, 711.52],   "reg",  7),
-    "premium_total":           (1, [480.0, 703.77, 570.0, 711.52],   "reg",  7),
+    # ТАБЛИЦА КОЭФФИЦИЕНТОВ
+    "tb":                      (1, [26.0, 703.77, 60.0, 711.52],     "reg",  7),
+    "kt":                      (1, [88.0, 703.77, 120.0, 711.52],    "reg",  7),
+    "kbm":                     (1, [143.0, 703.77, 174.0, 711.52],   "reg",  7),
+    "kvs":                     (1, [199.0, 703.77, 230.0, 711.52],   "reg",  7),
+    "ko":                      (1, [256.0, 703.77, 290.0, 711.52],   "reg",  7),
+    "ks":                      (1, [315.0, 703.77, 349.0, 711.52],   "reg",  7),
+    "kp":                      (1, [373.0, 703.77, 407.0, 711.52],   "reg",  7),
+    "km":                      (1, [428.0, 703.77, 465.0, 711.52],   "reg",  7),
+    "premium_total_thousands": (1, [495.0, 703.77, 525.0, 711.52],   "reg",  7),
+    "premium_total_kop":       (1, [525.0, 703.77, 555.0, 711.52],   "reg",  7),
 }
 
 CENTER_FIELDS = {
-    "premium_rub", "premium_kop", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
-    "premium_total", "trailer_new_x", "policy_series", "policy_number",
-    "vin", "gosnomer", "pts_series", "pts_number", "date_issue1", "date_issue2"
+    "premium_thousands", "premium_hundreds", "premium_kop",
+    "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
+    "premium_total_thousands", "premium_total_kop", "trailer_new_x",
+    "policy_series", "policy_number"
 }
+
+# Поля, которые ОБЯЗАТЕЛЬНО должны иметь 2 знака после запятой
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
-LIMITED_CHECKBOX = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
-UNLIMITED_CHECKBOX = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
-
-DRIVER_FIELDS = [
-    (1, [30.0, 555.9, 340.0, 563.65], "driver1_fio", "reg", 7, True),
-    (1, [360.0, 555.75, 425.0, 563.5], "driver1_license", "reg", 7, True),
-    (1, [500.0, 555.9, 540.0, 563.65], "driver1_kbm", "reg", 7, True),
-    (1, [30.0, 567.27, 340.0, 575.02], "driver2_fio", "reg", 7, True),
-    (1, [360.0, 567.27, 425.0, 575.02], "driver2_license", "reg", 7, True),
-    (1, [500.0, 567.27, 540.0, 575.02], "driver2_kbm", "reg", 7, True),
-    (1, [30.0, 577.27, 340.0, 585.02], "driver3_fio", "reg", 7, True),
-    (1, [360.0, 577.27, 425.0, 585.02], "driver3_license", "reg", 7, True),
-    (1, [500.0, 577.27, 540.0, 585.02], "driver3_kbm", "reg", 7, True),
-    (1, [30.0, 587.27, 340.0, 595.02], "driver4_fio", "reg", 7, True),
-    (1, [360.0, 587.27, 425.0, 595.02], "driver4_license", "reg", 7, True),
-    (1, [500.0, 587.27, 540.0, 595.02], "driver4_kbm", "reg", 7, True),
-    (1, [30.0, 597.27, 340.0, 605.02], "driver5_fio", "reg", 7, True),
-    (1, [360.0, 597.27, 425.0, 605.02], "driver5_license", "reg", 7, True),
-    (1, [500.0, 597.27, 540.0, 605.02], "driver5_kbm", "reg", 7, True),
-]
-
-# Вспомогательные функции для поиска
 def is_inside(inner, outer):
     r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
     return (r.x0 >= o.x0 - 0.5 and r.y0 >= o.y0 - 0.5 and r.x1 <= o.x1 + 0.5 and r.y1 <= o.y1 + 0.5)
@@ -101,167 +90,84 @@ def collect_spans(page, area):
                     out.append(sp)
     return out
 
-# Жесткие координаты X для дат (чтобы не зависеть от поиска текста)
-def get_date_x_coords(start_x, count=14, step=17.0):
-    return [start_x + i * step for i in range(count)]
-
-DATE_START_X = get_date_x_coords(337.75, 14, 17.0)
-DATE_END_X = get_date_x_coords(337.75, 14, 17.0)
-DATE_PSTART_X = get_date_x_coords(35.75, 14, 14.0)
-DATE_PEND_X = get_date_x_coords(171.75, 14, 14.0)
-
-def fill_pdf_to_memory(data):
-    raw_drivers = data.get("drivers", [])
-    valid_drivers = [d for d in raw_drivers if str(d.get("fio", "")).strip() and str(d.get("license", "")).strip()]
-    is_limited = len(valid_drivers) > 0
+def fill_pdf_to_memory(data, template_name="template.pdf"):
+    doc = pymupdf.open(template_name)
     
-    doc = pymupdf.open("template.pdf")
-    
-    tz = datetime.timezone(datetime.timedelta(hours=3))
-    today = datetime.datetime.now(tz).date()
+    today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
     end_date = next_year - datetime.timedelta(days=1)
     
-    d_start_str = " ".join(list(today.strftime("%d.%m.%Y")))
-    d_end_str = " ".join(list(end_date.strftime("%d.%m.%Y")))
-    
-    data["date_issue1"] = today.strftime("%d.%m.%Y")
-    data["date_issue2"] = today.strftime("%d.%m.%Y")
-    
-    total_str = str(data.get("premium_total_thousands", "")) + str(data.get("premium_total_kop", ""))
-    if "." in total_str:
-        rub_str, kop_str = total_str.split(".")
-    else:
-        rub_str = str(data.get("premium_thousands", "")) + str(data.get("premium_hundreds", ""))
-        kop_str = str(data.get("premium_kop", ""))
-    
-    if len(kop_str) == 1: kop_str = "0" + kop_str
-    if len(kop_str) > 2: kop_str = kop_str[:2]
-
-    data["premium_rub"] = rub_str
-    data["premium_kop"] = kop_str
-    data["premium_total"] = f"{rub_str}.{kop_str}"
-    data["footer_text"] = f"ТС в режиме использования такси не подлежит. Страховая премия: {rub_str} рублей {kop_str} копеек. Дата оформления: {today.strftime('%d.%m.%Y 00:00:00 UTC+03:00.')}"
-
-    all_fields = dict(FIELDS)
-    all_fields["limited_checkbox"] = LIMITED_CHECKBOX
-    all_fields["unlimited_checkbox"] = UNLIMITED_CHECKBOX
-    
-    data["limited_checkbox"] = "X" if is_limited else ""
-    data["unlimited_checkbox"] = "" if is_limited else "X"
-    
-    for i in range(1, 6):
-        data[f"driver{i}_fio"] = ""
-        data[f"driver{i}_license"] = ""
-        data[f"driver{i}_kbm"] = ""
-        
-    if is_limited:
-        for i, driver in enumerate(valid_drivers[:5]):
-            idx = i + 1
-            data[f"driver{idx}_fio"] = driver.get("fio", "")
-            data[f"driver{idx}_license"] = driver.get("license", "")
-            data[f"driver{idx}_kbm"] = driver.get("kbm", "")
-            try:
-                data[f"driver{idx}_kbm"] = f"{float(data[f'driver{idx}_kbm']):.2f}"
-            except:
-                pass
-
-    for df in DRIVER_FIELDS:
-        all_fields[df[2]] = (df[0], df[1], df[3], df[4])
-        if df[5]: CENTER_FIELDS.add(df[2])
+    data["date_start"] = today.strftime("%d.%m.%Y")
+    data["date_end"] = end_date.strftime("%d.%m.%Y")
+    data["date_period_start"] = data["date_start"]
+    data["date_period_end"] = data["date_end"]
+    data["date_issue1"] = data["date_start"]
+    data["date_issue2"] = data["date_start"]
+    data["date_design_1"] = today.strftime("%d.%m.")
+    data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
 
     by_page = {}
-    for key, (pno, rect, fkey, size) in all_fields.items():
-        val = str(data.get(key, "")).strip()
+    for key, (pno, rect, fkey, size) in FIELDS.items():
+        if key not in data: continue
+        val = str(data[key]).strip()
+        
+        # АВТО-ФОРМАТИРОВАНИЕ: Принудительно делаем 2 знака после запятой
         if key in DECIMAL_FIELDS:
-            try: val = f"{float(val):.2f}"
-            except: pass
+            try:
+                # Если пришло "1" или "1.0", превращаем в "1.00"
+                val = f"{float(val):.2f}" 
+            except ValueError:
+                pass # Если там текст, оставляем как есть
+                
+        if key in ["policy_series", "policy_number"] and not val: continue
         by_page.setdefault(pno, []).append((rect, val, fkey, size, key))
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
         to_delete, inserts = [], []
-        
-        # 1. ЖЕСТКАЯ ВСТАВКА ДАТ (БЕЗ ПОИСКА СТАРОГО ТЕКСТА)
-        # Верхняя дата "с" (Y = 187.21)
-        for i, ch in enumerate(d_start_str.replace(" ", "")):
-            if i < len(DATE_START_X):
-                x = DATE_START_X[i]
-                to_delete.append(pymupdf.Rect([x-2, 187.21, x+10, 197.18]))
-                inserts.append(("char", x, 195.56, ch, "reg", 9))
-        
-        # Верхняя дата "по" (Y = 207.21)
-        for i, ch in enumerate(d_end_str.replace(" ", "")):
-            if i < len(DATE_END_X):
-                x = DATE_END_X[i]
-                to_delete.append(pymupdf.Rect([x-2, 207.21, x+10, 217.18]))
-                inserts.append(("char", x, 215.56, ch, "reg", 9))
-
-        # Нижняя дата "с" (Y = 252.21)
-        for i, ch in enumerate(d_start_str.replace(" ", "")):
-            if i < len(DATE_PSTART_X):
-                x = DATE_PSTART_X[i]
-                to_delete.append(pymupdf.Rect([x-2, 252.21, x+10, 262.18]))
-                inserts.append(("char", x, 260.56, ch, "reg", 9))
-
-        # Нижняя дата "по" (Y = 252.21)
-        for i, ch in enumerate(d_end_str.replace(" ", "")):
-            if i < len(DATE_PEND_X):
-                x = DATE_PEND_X[i]
-                to_delete.append(pymupdf.Rect([x-2, 252.21, x+10, 262.18]))
-                inserts.append(("char", x, 260.56, ch, "reg", 9))
-
-        # 2. ОСТАЛЬНЫЕ ПОЛЯ
         for (rect, val, fkey, size, key) in items:
-            if key in ["date_start", "date_end", "date_period_start", "date_period_end"]:
-                continue # Их мы уже обработали выше
-                
-            r = pymupdf.Rect(rect)
-            spans = collect_spans(page, r)
-            
+            spans = collect_spans(page, rect)
+            if key == "trailer_old_x" and not spans: continue
             if spans:
-                left = min(sp["bbox"][0] for sp in spans)
-                right = max(sp["bbox"][2] for sp in spans)
-                bottom = max(sp["bbox"][3] for sp in spans)
-                
-                to_delete.append(pymupdf.Rect([left - 1, bottom - size - 1, right + 1, bottom + 1]))
-                
-                if key in CENTER_FIELDS:
-                    f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
-                    text_w = f_obj.text_length(val, fontsize=size)
-                    box_w = right - left
-                    x_new = left + (box_w - text_w) / 2 if text_w < box_w else left
-                else:
-                    x_new = left
-                    
-                baseline = bottom - 0.18 * size
-                inserts.append(("char", x_new, baseline, val, fkey, size))
+                for sp in spans: to_delete.append(sp["bbox"])
+            
+            if key in ["date_start", "date_end", "date_period_start", "date_period_end", "date_issue1", "date_issue2"]:
+                if not spans: continue
+                char_boxes = []
+                for sp in spans:
+                    text = sp['text'].strip()
+                    x0, y0, x1, y1 = sp['bbox']
+                    if len(text) == 1: char_boxes.append((x0, y0, x1, y1))
+                    else:
+                        w = (x1 - x0) / len(text)
+                        for i in range(len(text)): char_boxes.append((x0 + i*w, y0, x0 + (i+1)*w, y1))
+                char_boxes.sort(key=lambda b: b[0])
+                clean_val = val.replace(" ", "")
+                for i, ch in enumerate(clean_val):
+                    if i >= len(char_boxes): break
+                    x0, y0, x1, y1 = char_boxes[i]
+                    inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char"))
             else:
-                if key.startswith("driver") or key in ["trailer_old_x", "unlimited_checkbox", "limited_checkbox"]:
-                    pass # Если пусто и это чекбокс/водитель - просто игнорируем, вставки не будет
-                else:
-                    inserts.append(("box", r, val, fkey, size, key in CENTER_FIELDS))
+                r = pymupdf.Rect(rect)
+                is_center = key in CENTER_FIELDS
+                inserts.append((r, val, fkey, size, is_center, "box"))
 
-        # --- ОЧИСТКА ---
         if to_delete:
-            for bb in to_delete: page.add_redact_annot(bb, fill=False)
+            for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
             page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
 
         page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
-        # --- ВСТАВКА ---
         for item in inserts:
-            if item[0] == "char":
-                _, x, y, val, fkey, size = item
-                if not val: continue
+            if item[-1] == "char":
+                x0, baseline, val, fkey, size, _ = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
-                page.insert_text((x, y), val, fontname=fname, fontsize=size, color=(0,0,0))
+                if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
             
-            elif item[0] == "box":
-                _, r, val, fkey, size, is_center = item
-                if not val: continue
+            elif item[-1] == "box":
+                r, val, fkey, size, is_center, _ = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
                 
                 if is_center:
@@ -272,8 +178,9 @@ def fill_pdf_to_memory(data):
                 else:
                     x_new = r.x0
                     
-                baseline = r.y1 - 0.18 * size
-                page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
+                baseline = r.y1 - 0.22 * size
+                if val:
+                    page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
 
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
     doc.close()
@@ -282,7 +189,7 @@ def fill_pdf_to_memory(data):
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Привет! Пришли мне JSON.")
+    bot.reply_to(message, "Привет! Пришли мне JSON с данными для полиса.")
 
 @bot.message_handler(content_types=['text'])
 def handle_json(message):
@@ -299,11 +206,7 @@ def handle_json(message):
         data["trailer_old_x"] = "Х"
         data["trailer_new_x"] = ""
 
-    valid_drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip() and str(d.get("license", "")).strip()]
-    status_msg = "Ограниченный" if len(valid_drivers) > 0 else "Неограниченный"
-    
-    bot.reply_to(message, f"Найдено водителей: {len(valid_drivers)}. Тип полиса: {status_msg}. ⏳ Генерирую...")
-    
+    bot.reply_to(message, "⏳ Генерирую полис...")
     try:
         pdf_data = fill_pdf_to_memory(data)
         owner = data.get("owner_fio", "Полис_ОСАГО").strip()
