@@ -26,9 +26,10 @@ BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
-FIELDS = {
-    "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
-    "owner_fio":               (1, [16.0, 348.83, 230.86, 361.01], "reg",  11),
+# Общие поля для обоих бланков
+COMMON_FIELDS = {
+    "policyholder_fio":        (1, [16.0, 306.61, 213.11, 318.79], "reg",  11),
+    "owner_fio":               (1, [16.0, 348.79, 213.11, 360.97], "reg",  11),
     "marka":                   (1, [64.69, 402.65, 133.3, 414.83], "reg",  11),
     "model":                   (1, [90.89, 417.65, 140.52, 429.83], "reg",  11),
     "vin":                     (1, [201.46, 413.15, 302.75, 425.33], "reg", 11),
@@ -51,8 +52,6 @@ FIELDS = {
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
     "premium_in_words":        (1, [245.54, 730.34, 398.75, 739.2],  "reg",  8),
-    
-    # Коэффициенты немного расширены для центрирования, но "Итого" возвращено на место!
     "tb":                      (1, [26.0, 703.77, 60.0, 711.52],     "reg",  7),
     "kt":                      (1, [88.0, 703.77, 120.0, 711.52],    "reg",  7),
     "kbm":                     (1, [143.0, 703.77, 174.0, 711.52],   "reg",  7),
@@ -61,21 +60,44 @@ FIELDS = {
     "ks":                      (1, [315.0, 703.77, 349.0, 711.52],   "reg",  7),
     "kp":                      (1, [373.0, 703.77, 407.0, 711.52],   "reg",  7),
     "km":                      (1, [428.0, 703.77, 465.0, 711.52],   "reg",  7),
-    
-    # ВОЗВРАЩАЕМ СТАРЫЕ КООРДИНАТЫ ДЛЯ ИТОГО, ЧТОБЫ НЕ БЫЛО НАЛОЖЕНИЯ
     "premium_total_thousands": (1, [516.49, 703.77, 523.48, 711.52], "reg",  7),
     "premium_total_kop":       (1, [523.47, 703.77, 544.47, 711.52], "reg",  7),
 }
 
-# ВНИМАНИЕ: Убрал из этого списка premium_total_..., чтобы они рисовались строго по своим местам, а не по центру!
 CENTER_FIELDS = {
     "premium_thousands", "premium_hundreds", "premium_kop",
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
-    "trailer_new_x", "policy_series", "policy_number"
+    "premium_total_thousands", "premium_total_kop", "trailer_new_x",
+    "policy_series", "policy_number"
 }
-
-# Поля, которые ОБЯЗАТЕЛЬНО должны иметь 2 знака после запятой
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
+
+# Координаты для галочек и водителей
+LIMITED_CHECKBOX = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
+UNLIMITED_CHECKBOX = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
+
+DRIVER_FIELDS = [
+    # Ряд 1
+    (1, [158.03, 555.9, 216.31, 563.65], "driver1_fio", "reg", 7, False),
+    (1, [373.24, 555.75, 412.29, 563.5], "driver1_license", "reg", 7, False),
+    (1, [512.22, 555.9, 523.88, 563.65], "driver1_kbm", "reg", 7, True),
+    # Ряд 2
+    (1, [158.03, 567.27, 216.31, 575.02], "driver2_fio", "reg", 7, False),
+    (1, [373.48, 567.27, 412.53, 575.02], "driver2_license", "reg", 7, False),
+    (1, [512.67, 567.27, 524.33, 575.02], "driver2_kbm", "reg", 7, True),
+    # Ряд 3
+    (1, [158.86, 577.27, 217.13, 585.02], "driver3_fio", "reg", 7, False),
+    (1, [373.48, 577.27, 412.53, 585.02], "driver3_license", "reg", 7, False),
+    (1, [512.67, 577.27, 524.33, 585.02], "driver3_kbm", "reg", 7, True),
+    # Ряд 4
+    (1, [158.86, 587.27, 217.13, 595.02], "driver4_fio", "reg", 7, False),
+    (1, [373.48, 587.27, 412.53, 595.02], "driver4_license", "reg", 7, False),
+    (1, [512.67, 587.27, 524.33, 595.02], "driver4_kbm", "reg", 7, True),
+    # Ряд 5
+    (1, [158.86, 597.27, 217.13, 605.02], "driver5_fio", "reg", 7, False),
+    (1, [373.48, 597.27, 412.53, 605.02], "driver5_license", "reg", 7, False),
+    (1, [512.67, 597.27, 524.33, 605.02], "driver5_kbm", "reg", 7, True),
+]
 
 def is_inside(inner, outer):
     r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
@@ -91,9 +113,15 @@ def collect_spans(page, area):
                     out.append(sp)
     return out
 
-def fill_pdf_to_memory(data, template_name="template.pdf"):
+def fill_pdf_to_memory(data):
+    drivers = data.get("drivers", [])
+    is_limited = len(drivers) > 0
+    
+    # Выбираем шаблон
+    template_name = "template_limited.pdf" if is_limited else "template.pdf"
     doc = pymupdf.open(template_name)
     
+    # Авто-даты
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
@@ -108,17 +136,41 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
     data["date_design_1"] = today.strftime("%d.%m.")
     data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
 
+    # Собираем все поля для заполнения
+    all_fields = dict(COMMON_FIELDS)
+    
+    # Добавляем галочки
+    all_fields["limited_checkbox"] = LIMITED_CHECKBOX
+    all_fields["unlimited_checkbox"] = UNLIMITED_CHECKBOX
+    data["limited_checkbox"] = "X" if is_limited else ""
+    data["unlimited_checkbox"] = "" if is_limited else "X"
+    
+    # Добавляем данные водителей, если это ограниченный полис
+    if is_limited:
+        for i, driver in enumerate(drivers[:5]):
+            idx = i + 1
+            data[f"driver{idx}_fio"] = driver.get("fio", "")
+            data[f"driver{idx}_license"] = driver.get("license", "")
+            data[f"driver{idx}_kbm"] = driver.get("kbm", "")
+            try:
+                data[f"driver{idx}_kbm"] = f"{float(data[f'driver{idx}_kbm']):.2f}"
+            except:
+                pass
+
+        for df in DRIVER_FIELDS:
+            all_fields[df[2]] = (df[0], df[1], df[3], df[4])
+            if df[5]:  # Если нужно центрировать
+                CENTER_FIELDS.add(df[2])
+
     by_page = {}
-    for key, (pno, rect, fkey, size) in FIELDS.items():
+    for key, (pno, rect, fkey, size) in all_fields.items():
         if key not in data: continue
         val = str(data[key]).strip()
         
-        # АВТО-ФОРМАТИРОВАНИЕ: Принудительно делаем 2 знака после запятой для коэффициентов
+        # Автоформат для коэффициентов
         if key in DECIMAL_FIELDS:
-            try:
-                val = f"{float(val):.2f}" 
-            except ValueError:
-                pass
+            try: val = f"{float(val):.2f}"
+            except: pass
                 
         if key in ["policy_series", "policy_number"] and not val: continue
         by_page.setdefault(pno, []).append((rect, val, fkey, size, key))
@@ -179,8 +231,7 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
                     x_new = r.x0
                     
                 baseline = r.y1 - 0.22 * size
-                if val:
-                    page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
+                if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
 
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
     doc.close()
@@ -189,7 +240,7 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Привет! Пришли мне JSON с данными для полиса.")
+    bot.reply_to(message, "Привет! Пришли мне JSON.\n\nДля ограниченного полиса добавь массив drivers, например:\n\"drivers\": [\n  {\"fio\": \"ИВАНОВ ИВАН\", \"license\": \"99 88 123456\", \"kbm\": \"0.95\"}\n]")
 
 @bot.message_handler(content_types=['text'])
 def handle_json(message):
