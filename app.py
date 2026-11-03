@@ -6,7 +6,6 @@ import threading
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 if not BOT_TOKEN:
-    print("ОШИБКА: Не найден BOT_TOKEN")
     exit(1)
 
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -24,14 +23,10 @@ def load_font(paths):
 REG_BUF = load_font(["times.ttf", r"C:\Windows\Fonts\times.ttf"])
 BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 
-if not REG_BUF or not BLD_BUF:
-    print("ОШИБКА: Шрифты не найдены")
-    exit(1)
-
-# Возвращаем объекты шрифтов для расчета ширины текста
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
+# РАСШИРЕННЫЕ КООРДИНАТЫ ДЛЯ ИДЕАЛЬНОГО ЦЕНТРИРОВАНИЯ
 FIELDS = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
     "owner_fio":               (1, [16.0, 348.83, 230.86, 361.01], "reg",  11),
@@ -57,16 +52,18 @@ FIELDS = {
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
     "premium_in_words":        (1, [245.54, 730.34, 398.75, 739.2],  "reg",  8),
-    "tb":                      (1, [36.0, 703.77, 49.98, 711.52],    "reg",  7),
-    "kt":                      (1, [97.61, 703.77, 109.83, 711.52],  "reg",  7),
-    "kbm":                     (1, [156.75, 703.77, 160.25, 711.52], "reg",  7),
-    "kvs":                     (1, [210.84, 703.77, 217.83, 711.52], "reg",  7),
-    "ko":                      (1, [266.08, 703.77, 280.05, 711.52], "reg",  7),
-    "ks":                      (1, [330.25, 703.77, 333.75, 711.52], "reg",  7),
-    "kp":                      (1, [388.48, 703.77, 391.98, 711.52], "reg",  7),
-    "km":                      (1, [440.42, 703.77, 452.64, 711.52], "reg",  7),
-    "premium_total_thousands": (1, [516.49, 703.77, 523.48, 711.52], "reg",  7),
-    "premium_total_kop":       (1, [523.47, 703.77, 544.47, 711.52], "reg",  7),
+    
+    # ТАБЛИЦА КОЭФФИЦИЕНТОВ
+    "tb":                      (1, [26.0, 703.77, 60.0, 711.52],     "reg",  7),
+    "kt":                      (1, [88.0, 703.77, 120.0, 711.52],    "reg",  7),
+    "kbm":                     (1, [143.0, 703.77, 174.0, 711.52],   "reg",  7),
+    "kvs":                     (1, [199.0, 703.77, 230.0, 711.52],   "reg",  7),
+    "ko":                      (1, [256.0, 703.77, 290.0, 711.52],   "reg",  7),
+    "ks":                      (1, [315.0, 703.77, 349.0, 711.52],   "reg",  7),
+    "kp":                      (1, [373.0, 703.77, 407.0, 711.52],   "reg",  7),
+    "km":                      (1, [428.0, 703.77, 465.0, 711.52],   "reg",  7),
+    "premium_total_thousands": (1, [495.0, 703.77, 525.0, 711.52],   "reg",  7),
+    "premium_total_kop":       (1, [525.0, 703.77, 555.0, 711.52],   "reg",  7),
 }
 
 CENTER_FIELDS = {
@@ -75,6 +72,9 @@ CENTER_FIELDS = {
     "premium_total_thousands", "premium_total_kop", "trailer_new_x",
     "policy_series", "policy_number"
 }
+
+# Поля, которые ОБЯЗАТЕЛЬНО должны иметь 2 знака после запятой
+DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
 def is_inside(inner, outer):
     r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
@@ -111,8 +111,16 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
     for key, (pno, rect, fkey, size) in FIELDS.items():
         if key not in data: continue
         val = str(data[key]).strip()
-        if key in ["policy_series", "policy_number"] and not val:
-            continue
+        
+        # АВТО-ФОРМАТИРОВАНИЕ: Принудительно делаем 2 знака после запятой
+        if key in DECIMAL_FIELDS:
+            try:
+                # Если пришло "1" или "1.0", превращаем в "1.00"
+                val = f"{float(val):.2f}" 
+            except ValueError:
+                pass # Если там текст, оставляем как есть
+                
+        if key in ["policy_series", "policy_number"] and not val: continue
         by_page.setdefault(pno, []).append((rect, val, fkey, size, key))
 
     for pno, items in by_page.items():
@@ -162,7 +170,6 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
                 r, val, fkey, size, is_center, _ = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
                 
-                # Ручное центрирование для надежности
                 if is_center:
                     f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
                     text_w = f_obj.text_length(val, fontsize=size)
@@ -170,7 +177,7 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
                     if text_w >= r.width: x_new = r.x0
                 else:
                     x_new = r.x0
-                
+                    
                 baseline = r.y1 - 0.22 * size
                 if val:
                     page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
