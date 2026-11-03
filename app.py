@@ -26,22 +26,19 @@ BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
-# Общие поля (рамки откалиброваны так, чтобы захватывать старый текст полностью)
+# ИСПОЛЬЗУЕМ ТОЛЬКО ОДИН ШАБЛОН - БЕЗОШИБОЧНЫЙ template.pdf
 FIELDS = {
     "policyholder_fio":        (1, [16.0, 306.61, 250.0, 318.79], "reg",  11),
     "owner_fio":               (1, [16.0, 348.79, 250.0, 360.97], "reg",  11),
     "marka":                   (1, [64.69, 402.65, 150.0, 414.83], "reg",  11),
     "model":                   (1, [90.89, 417.65, 160.0, 429.83], "reg",  11),
-    
     "vin":                     (1, [195.0, 413.15, 350.0, 425.33], "reg", 11),
     "gosnomer":                (1, [480.0, 413.15, 560.0, 425.33], "reg", 11),
-    
     "pts_series":              (1, [405.0, 444.77, 450.0, 452.52], "bold", 7),
     "pts_number":              (1, [490.0, 444.77, 530.0, 452.52], "bold", 7),
     
     "premium_rub":             (1, [440.0, 56.65, 500.0, 68.83],    "bold", 11),
     "premium_kop":             (1, [505.0, 56.65, 530.0, 68.83],    "bold", 11),
-    
     "policy_series":           (1, [259.0, 88.47, 282.8, 100.65],    "bold", 11),
     "policy_number":           (1, [349.0, 88.47, 403.9, 100.65],    "bold", 11),
     
@@ -51,12 +48,11 @@ FIELDS = {
     "date_period_end":         (1, [160.0, 252.21, 285.0, 262.18],   "reg",  9),
     "date_issue1":             (1, [100.0, 754.3, 145.0, 762.05],   "reg",  7),
     "date_issue2":             (1, [220.0, 754.3, 265.0, 762.05],  "reg",  7),
-    
     "footer_text":             (1, [15.0, 730.34, 550.0, 739.2],  "reg",  8),
+    
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
     
-    # Коэффициенты отцентрованы строго по твоим замерам
     "tb":                      (1, [30.0, 703.77, 60.0, 711.52],     "reg",  7),
     "kt":                      (1, [85.0, 703.77, 125.0, 711.52],    "reg",  7),
     "kbm":                     (1, [145.0, 703.77, 175.0, 711.52],   "reg",  7),
@@ -65,8 +61,6 @@ FIELDS = {
     "ks":                      (1, [320.0, 703.77, 350.0, 711.52],   "reg",  7),
     "kp":                      (1, [375.0, 703.77, 405.0, 711.52],   "reg",  7),
     "km":                      (1, [430.0, 703.77, 460.0, 711.52],   "reg",  7),
-    
-    # Итого - одна широкая рамка, чтобы сумма 9873.86 встала целиком
     "premium_total":           (1, [480.0, 703.77, 570.0, 711.52],   "reg",  7),
 }
 
@@ -76,10 +70,11 @@ CENTER_FIELDS = {
 }
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
+# Координаты галочек (из твоего template.pdf)
 LIMITED_CHECKBOX = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
 UNLIMITED_CHECKBOX = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
 
-# Координаты водителей (сдвинуты вправо, чтобы не налезать на цифру 1)
+# Координаты для водителей на основе прочерков из template.pdf
 DRIVER_FIELDS = [
     (1, [35.0, 552.0, 340.0, 566.0], "driver1_fio", "reg", 7, False),
     (1, [355.0, 552.0, 480.0, 566.0], "driver1_license", "reg", 7, False),
@@ -110,19 +105,17 @@ def fill_pdf_to_memory(data):
     drivers = data.get("drivers", [])
     is_limited = len(drivers) > 0
     
-    template_name = "template_limited.pdf" if is_limited else "template.pdf"
-    doc = pymupdf.open(template_name)
+    # ВСЕГДА ИСПОЛЬЗУЕМ ОДИН ШАБЛОН!
+    doc = pymupdf.open("template.pdf")
     
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
     end_date = next_year - datetime.timedelta(days=1)
     
-    # Даты вставляем слитно, но с пробелами для красоты
     d_start = " ".join(list(today.strftime("%d.%m.%Y")))
     d_end = " ".join(list(end_date.strftime("%d.%m.%Y")))
     
-    # Берем Итоговую сумму и разбиваем ее для верхней премии
     total_str = str(data.get("premium_total_thousands", "")) + str(data.get("premium_total_kop", ""))
     if "." in total_str:
         rub_str, kop_str = total_str.split(".")
@@ -141,6 +134,8 @@ def fill_pdf_to_memory(data):
     all_fields = dict(FIELDS)
     all_fields["limited_checkbox"] = LIMITED_CHECKBOX
     all_fields["unlimited_checkbox"] = UNLIMITED_CHECKBOX
+    
+    # Ставим крестики в зависимости от того, ограниченный полис или нет
     data["limited_checkbox"] = "X" if is_limited else ""
     data["unlimited_checkbox"] = "" if is_limited else "X"
     
@@ -178,30 +173,20 @@ def fill_pdf_to_memory(data):
         for (rect, val, fkey, size, key) in items:
             r = pymupdf.Rect(rect)
             
-            # Подменяем значения для дат
             if key in ["date_start", "date_period_start"]: val = d_start
             elif key in ["date_end", "date_period_end"]: val = d_end
 
             if val:
-                # СТИРАЕМ ВСЮ ЯЧЕЙКУ ЦЕЛИКОМ (гарантия отсутствия наложений)
                 to_delete.append(r)
                 is_center = key in CENTER_FIELDS
                 inserts.append((r, val, fkey, size, is_center, "box"))
             else:
-                # Если значение пустое (например, убрать крестик), стираем только найденный текст
+                # Если значение пустое (убираем крестик), то ищем и стираем его
                 if key in ["trailer_old_x", "unlimited_checkbox", "limited_checkbox"]:
                     spans = collect_spans(page, r)
                     if spans:
                         for sp in spans: to_delete.append(sp["bbox"])
-                    # Если это чекбокс "ограниченного", но мы его не ставим - пропускаем
-                    if key == "limited_checkbox" and not is_limited:
-                        pass
-                    elif key == "unlimited_checkbox" and is_limited:
-                        pass
-                    else:
-                        inserts.append((r, "", fkey, size, True, "box"))
 
-        # Очищаем старые данные
         if to_delete:
             for bb in to_delete: page.add_redact_annot(bb, fill=False)
             page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
@@ -209,7 +194,6 @@ def fill_pdf_to_memory(data):
         page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
-        # Вставляем новый текст
         for r, val, fkey, size, is_center, _ in inserts:
             if not val: continue
             fname = "tnewb" if fkey == "bold" else "tnew"
