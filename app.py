@@ -40,7 +40,6 @@ FIELDS = {
     "policy_series":           (1, [259.0, 88.47, 282.8, 100.65],    "bold", 11),
     "policy_number":           (1, [349.0, 88.47, 403.9, 100.65],    "bold", 11),
     
-    # Рамки для дат сделаны точными
     "date_start":              (1, [440.0, 187.21, 570.0, 197.18], "reg",  9),
     "date_end":                (1, [440.0, 207.21, 570.0, 217.18], "reg",  9),
     "date_period_start":       (1, [25.0, 252.21, 150.0, 262.18],    "reg",  9),
@@ -89,6 +88,21 @@ DRIVER_FIELDS = [
     (1, [360.0, 597.27, 425.0, 605.02], "driver5_license", "reg", 7, True),
     (1, [500.0, 597.27, 540.0, 605.02], "driver5_kbm", "reg", 7, True),
 ]
+
+# ВОЗВРАЩАЕМ ПРОПАВШИЕ ФУНКЦИИ
+def is_inside(inner, outer):
+    r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
+    return (r.x0 >= o.x0 - 0.5 and r.y0 >= o.y0 - 0.5 and r.x1 <= o.x1 + 0.5 and r.y1 <= o.y1 + 0.5)
+
+def collect_spans(page, area):
+    out = []
+    for b in page.get_text("dict").get("blocks", []):
+        if b.get("type") != 0: continue
+        for ln in b.get("lines", []):
+            for sp in ln.get("spans", []):
+                if sp.get("text", "").strip() and is_inside(sp["bbox"], area):
+                    out.append(sp)
+    return out
 
 def fill_pdf_to_memory(data):
     raw_drivers = data.get("drivers", [])
@@ -172,7 +186,6 @@ def fill_pdf_to_memory(data):
             elif key == "date_period_start": val = d_start
             elif key == "date_period_end": val = d_end
 
-            # ДЛЯ ПЕРИОДА ИСПОЛЬЗОВАНИЯ ВСТАВЛЯЕМ ПО БУКВАМ (чтобы попасть в клетки)
             if key in ["date_period_start", "date_period_end"]:
                 if not spans: continue
                 char_boxes = []
@@ -195,7 +208,6 @@ def fill_pdf_to_memory(data):
                     to_delete.append(pymupdf.Rect([x0, y0, x1, y1]))
                     inserts.append((x0, y1 - 0.18 * size, ch, fkey, size, "char"))
             
-            # ДЛЯ ОСТАЛЬНЫХ ДАТ И ПОЛЕЙ СТИРАЕМ ВСЮ РАМКУ
             elif val:
                 to_delete.append(r)
                 is_center = key in CENTER_FIELDS
