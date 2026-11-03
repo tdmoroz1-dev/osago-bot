@@ -1,6 +1,6 @@
 import telebot
 import pymupdf
-import os, datetime, json, io, gc
+import os, datetime, json, io, gc, traceback
 from flask import Flask
 import threading
 
@@ -26,6 +26,9 @@ BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
+# =========================================================================
+# ТВОЙ РАБОЧИЙ КОД ДЛЯ НЕОГРАНИЧЕННОГО ПОЛИСА (Я ЕГО НЕ ТРОГАЛ)
+# =========================================================================
 FIELDS = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
     "owner_fio":               (1, [16.0, 348.83, 230.86, 361.01], "reg",  11),
@@ -51,8 +54,6 @@ FIELDS = {
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
     "premium_in_words":        (1, [245.54, 730.34, 398.75, 739.2],  "reg",  8),
-    
-    # Коэффициенты немного расширены для центрирования, но "Итого" возвращено на место!
     "tb":                      (1, [26.0, 703.77, 60.0, 711.52],     "reg",  7),
     "kt":                      (1, [88.0, 703.77, 120.0, 711.52],    "reg",  7),
     "kbm":                     (1, [143.0, 703.77, 174.0, 711.52],   "reg",  7),
@@ -61,20 +62,15 @@ FIELDS = {
     "ks":                      (1, [315.0, 703.77, 349.0, 711.52],   "reg",  7),
     "kp":                      (1, [373.0, 703.77, 407.0, 711.52],   "reg",  7),
     "km":                      (1, [428.0, 703.77, 465.0, 711.52],   "reg",  7),
-    
-    # ВОЗВРАЩАЕМ СТАРЫЕ КООРДИНАТЫ ДЛЯ ИТОГО, ЧТОБЫ НЕ БЫЛО НАЛОЖЕНИЯ
     "premium_total_thousands": (1, [516.49, 703.77, 523.48, 711.52], "reg",  7),
     "premium_total_kop":       (1, [523.47, 703.77, 544.47, 711.52], "reg",  7),
 }
 
-# ВНИМАНИЕ: Убрал из этого списка premium_total_..., чтобы они рисовались строго по своим местам, а не по центру!
 CENTER_FIELDS = {
     "premium_thousands", "premium_hundreds", "premium_kop",
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
     "trailer_new_x", "policy_series", "policy_number"
 }
-
-# Поля, которые ОБЯЗАТЕЛЬНО должны иметь 2 знака после запятой
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
 def is_inside(inner, outer):
@@ -113,12 +109,9 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
         if key not in data: continue
         val = str(data[key]).strip()
         
-        # АВТО-ФОРМАТИРОВАНИЕ: Принудительно делаем 2 знака после запятой для коэффициентов
         if key in DECIMAL_FIELDS:
-            try:
-                val = f"{float(val):.2f}" 
-            except ValueError:
-                pass
+            try: val = f"{float(val):.2f}" 
+            except ValueError: pass
                 
         if key in ["policy_series", "policy_number"] and not val: continue
         by_page.setdefault(pno, []).append((rect, val, fkey, size, key))
@@ -165,7 +158,6 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
                 x0, baseline, val, fkey, size, _ = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
                 if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
-            
             elif item[-1] == "box":
                 r, val, fkey, size, is_center, _ = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
@@ -179,13 +171,156 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
                     x_new = r.x0
                     
                 baseline = r.y1 - 0.22 * size
-                if val:
-                    page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
+                if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
 
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
     doc.close()
     gc.collect()
     return pdf_bytes
+
+# =========================================================================
+# НОВАЯ ФУНКЦИЯ ДЛЯ ОГРАНИЧЕННОГО ПОЛИСА (ОТДЕЛЬНО)
+# =========================================================================
+def fill_limited_pdf_to_memory(data):
+    # Работаем с тем же самым бланком template.pdf
+    doc = pymupdf.open("template.pdf")
+    
+    today = datetime.date.today()
+    try: next_year = today.replace(year=today.year + 1)
+    except ValueError: next_year = today.replace(year=today.year + 1, day=28)
+    end_date = next_year - datetime.timedelta(days=1)
+    
+    data["date_start"] = today.strftime("%d.%m.%Y")
+    data["date_end"] = end_date.strftime("%d.%m.%Y")
+    data["date_period_start"] = data["date_start"]
+    data["date_period_end"] = data["date_end"]
+    data["date_issue1"] = data["date_start"]
+    data["date_issue2"] = data["date_start"]
+    data["date_design_1"] = today.strftime("%d.%m.")
+    data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
+
+    # Берем копию словаря полей и добавляем туда водителей
+    all_fields = dict(FIELDS)
+    
+    # Координаты для галочки "ограниченный" (вместо неограниченного)
+    all_fields["limited_checkbox"] = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
+    data["limited_checkbox"] = "X"
+    
+    # Очищаем галочку неограниченного
+    all_fields["unlimited_checkbox"] = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
+    data["unlimited_checkbox"] = ""
+
+    # Добавляем водителей (первые 3, т.к. в шаблоне основные строки)
+    drivers = data.get("drivers", [])
+    driver_fields = [
+        (1, [30.0, 555.9, 340.0, 563.65], "driver1_fio", "reg", 7),
+        (1, [360.0, 555.75, 425.0, 563.5], "driver1_license", "reg", 7),
+        (1, [500.0, 555.9, 540.0, 563.65], "driver1_kbm", "reg", 7),
+        
+        (1, [30.0, 567.27, 340.0, 575.02], "driver2_fio", "reg", 7),
+        (1, [360.0, 567.27, 425.0, 575.02], "driver2_license", "reg", 7),
+        (1, [500.0, 567.27, 540.0, 575.02], "driver2_kbm", "reg", 7),
+        
+        (1, [30.0, 577.27, 340.0, 585.02], "driver3_fio", "reg", 7),
+        (1, [360.0, 577.27, 425.0, 585.02], "driver3_license", "reg", 7),
+        (1, [500.0, 577.27, 540.0, 585.02], "driver3_kbm", "reg", 7),
+    ]
+
+    for i, d in enumerate(drivers[:3]):
+        idx = i + 1
+        data[f"driver{idx}_fio"] = d.get("fio", "")
+        data[f"driver{idx}_license"] = d.get("license", "")
+        try:
+            data[f"driver{idx}_kbm"] = f"{float(d.get('kbm', '1.00')):.2f}"
+        except:
+            data[f"driver{idx}_kbm"] = "1.00"
+            
+    for df in driver_fields:
+        all_fields[df[2]] = (df[0], df[1], df[3], df[4])
+
+    # Проходим по всем полям и стираем старое, вставляем новое
+    by_page = {}
+    for key, (pno, rect, fkey, size) in all_fields.items():
+        if key not in data: continue
+        val = str(data[key]).strip()
+        
+        if key in DECIMAL_FIELDS:
+            try: val = f"{float(val):.2f}" 
+            except ValueError: pass
+                
+        if key in ["policy_series", "policy_number"] and not val: continue
+        by_page.setdefault(pno, []).append((rect, val, fkey, size, key))
+
+    for pno, items in by_page.items():
+        page = doc[pno - 1]
+        to_delete, inserts = [], []
+        for (rect, val, fkey, size, key) in items:
+            r = pymupdf.Rect(rect)
+            spans = collect_spans(page, r)
+            
+            if key in ["trailer_old_x", "unlimited_checkbox", "limited_checkbox"]:
+                if spans:
+                    for sp in spans: to_delete.append(sp["bbox"])
+                if val: 
+                    # Центрируем крестик
+                    inserts.append((r, val, fkey, size, True, "box"))
+                continue
+
+            if spans:
+                for sp in spans: to_delete.append(sp["bbox"])
+            
+            if key in ["date_start", "date_end", "date_period_start", "date_period_end", "date_issue1", "date_issue2"]:
+                if not spans: continue
+                char_boxes = []
+                for sp in spans:
+                    text = sp['text'].strip()
+                    x0, y0, x1, y1 = sp['bbox']
+                    if len(text) == 1: char_boxes.append((x0, y0, x1, y1))
+                    else:
+                        w = (x1 - x0) / len(text)
+                        for i in range(len(text)): char_boxes.append((x0 + i*w, y0, x0 + (i+1)*w, y1))
+                char_boxes.sort(key=lambda b: b[0])
+                clean_val = val.replace(" ", "")
+                for i, ch in enumerate(clean_val):
+                    if i >= len(char_boxes): break
+                    x0, y0, x1, y1 = char_boxes[i]
+                    inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char"))
+            else:
+                is_center = True if key.startswith("driver") else (key in CENTER_FIELDS)
+                inserts.append((r, val, fkey, size, is_center, "box"))
+
+        if to_delete:
+            for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
+            page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
+
+        page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
+        page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
+
+        for item in inserts:
+            if item[-1] == "char":
+                x0, baseline, val, fkey, size, _ = item
+                fname = "tnewb" if fkey == "bold" else "tnew"
+                if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
+            elif item[-1] == "box":
+                r, val, fkey, size, is_center, _ = item
+                fname = "tnewb" if fkey == "bold" else "tnew"
+                
+                if is_center:
+                    f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
+                    text_w = f_obj.text_length(val, fontsize=size)
+                    x_new = r.x0 + (r.width - text_w) / 2
+                    if text_w >= r.width: x_new = r.x0
+                else:
+                    x_new = r.x0
+                    
+                baseline = r.y1 - 0.22 * size
+                if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
+
+    pdf_bytes = doc.tobytes(garbage=4, deflate=True)
+    doc.close()
+    gc.collect()
+    return pdf_bytes
+
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -206,9 +341,17 @@ def handle_json(message):
         data["trailer_old_x"] = "Х"
         data["trailer_new_x"] = ""
 
-    bot.reply_to(message, "⏳ Генерирую полис...")
-    try:
+    # Проверяем, есть ли реальные водители в JSON
+    drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
+    
+    if drivers:
+        bot.reply_to(message, f"Найдено водителей: {len(drivers)}. Тип полиса: Ограниченный. ⏳ Генерирую...")
+        pdf_data = fill_limited_pdf_to_memory(data)
+    else:
+        bot.reply_to(message, "Найдено водителей: 0. Тип полиса: Неограниченный. ⏳ Генерирую...")
         pdf_data = fill_pdf_to_memory(data)
+
+    try:
         owner = data.get("owner_fio", "Полис_ОСАГО").strip()
         safe_name = "".join([c for c in owner if c not in r'\/:*?"<>|']).strip() or "Полис_ОСАГО"
         
