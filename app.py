@@ -26,39 +26,40 @@ BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
+# Общие рамки (для поиска старого текста)
 FIELDS = {
-    "policyholder_fio":        (1, [22.0, 306.61, 250.0, 318.79], "reg",  11),
-    "owner_fio":               (1, [22.0, 348.79, 250.0, 360.97], "reg",  11),
-    "marka":                   (1, [60.0, 402.65, 150.0, 414.83], "reg",  11),
-    "model":                   (1, [85.0, 417.65, 160.0, 429.83], "reg",  11),
-    "vin":                     (1, [200.0, 413.15, 315.0, 425.33], "reg", 11),
-    "gosnomer":                (1, [480.0, 413.15, 560.0, 425.33], "reg", 11),
-    "pts_series":              (1, [405.0, 444.77, 450.0, 452.52], "bold", 7),
-    "pts_number":              (1, [490.0, 444.77, 530.0, 452.52], "bold", 7),
+    "policyholder_fio":        (1, [15.0, 306.61, 250.0, 318.79], "reg",  11),
+    "owner_fio":               (1, [15.0, 348.79, 250.0, 360.97], "reg",  11),
+    "marka":                   (1, [50.0, 402.65, 150.0, 414.83], "reg",  11),
+    "model":                   (1, [50.0, 417.65, 160.0, 429.83], "reg",  11),
+    "vin":                     (1, [180.0, 413.15, 330.0, 425.33], "reg", 11),
+    "gosnomer":                (1, [450.0, 413.15, 570.0, 425.33], "reg", 11),
+    "pts_series":              (1, [380.0, 444.77, 450.0, 452.52], "bold", 7),
+    "pts_number":              (1, [470.0, 444.77, 540.0, 452.52], "bold", 7),
     "premium_rub":             (1, [440.0, 56.65, 500.0, 68.83],    "bold", 11),
     "premium_kop":             (1, [505.0, 56.65, 530.0, 68.83],    "bold", 11),
     "policy_series":           (1, [259.0, 88.47, 282.8, 100.65],    "bold", 11),
     "policy_number":           (1, [349.0, 88.47, 403.9, 100.65],    "bold", 11),
     
-    "date_start":              (1, [440.0, 187.21, 570.0, 197.18], "reg",  9),
-    "date_end":                (1, [440.0, 207.21, 570.0, 217.18], "reg",  9),
-    "date_period_start":       (1, [25.0, 252.21, 150.0, 262.18],    "reg",  9),
-    "date_period_end":         (1, [160.0, 252.21, 285.0, 262.18],   "reg",  9),
+    "date_start":              (1, [400.0, 187.21, 580.0, 197.18], "reg",  9),
+    "date_end":                (1, [400.0, 207.21, 580.0, 217.18], "reg",  9),
+    "date_period_start":       (1, [20.0, 252.21, 150.0, 262.18],    "reg",  9),
+    "date_period_end":         (1, [150.0, 252.21, 300.0, 262.18],   "reg",  9),
+    "date_issue1":             (1, [90.0, 754.3, 150.0, 762.05],   "reg",  7),
+    "date_issue2":             (1, [200.0, 754.3, 280.0, 762.05],  "reg",  7),
+    "footer_text":             (1, [15.0, 730.34, 560.0, 739.2],  "reg",  8),
     
-    "date_issue1":             (1, [100.0, 754.3, 145.0, 762.05],   "reg",  7),
-    "date_issue2":             (1, [220.0, 754.3, 265.0, 762.05],  "reg",  7),
-    "footer_text":             (1, [15.0, 730.34, 550.0, 739.2],  "reg",  8),
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
-    "tb":                      (1, [33.0, 703.77, 53.0, 711.52],     "reg",  7),
-    "kt":                      (1, [93.0, 703.77, 113.0, 711.52],    "reg",  7),
-    "kbm":                     (1, [148.0, 703.77, 169.0, 711.52],   "reg",  7),
-    "kvs":                     (1, [206.0, 703.77, 226.0, 711.52],   "reg",  7),
-    "ko":                      (1, [264.0, 703.77, 284.0, 711.52],   "reg",  7),
-    "ks":                      (1, [322.0, 703.77, 342.0, 711.52],   "reg",  7),
-    "kp":                      (1, [380.0, 703.77, 400.0, 711.52],   "reg",  7),
-    "km":                      (1, [438.0, 703.77, 458.0, 711.52],   "reg",  7),
-    "premium_total":           (1, [495.0, 703.77, 563.0, 711.52],   "reg",  7),
+    "tb":                      (1, [20.0, 703.77, 70.0, 711.52],     "reg",  7),
+    "kt":                      (1, [80.0, 703.77, 130.0, 711.52],    "reg",  7),
+    "kbm":                     (1, [135.0, 703.77, 185.0, 711.52],   "reg",  7),
+    "kvs":                     (1, [190.0, 703.77, 240.0, 711.52],   "reg",  7),
+    "ko":                      (1, [245.0, 703.77, 300.0, 711.52],   "reg",  7),
+    "ks":                      (1, [305.0, 703.77, 360.0, 711.52],   "reg",  7),
+    "kp":                      (1, [365.0, 703.77, 420.0, 711.52],   "reg",  7),
+    "km":                      (1, [425.0, 703.77, 480.0, 711.52],   "reg",  7),
+    "premium_total":           (1, [480.0, 703.77, 570.0, 711.52],   "reg",  7),
 }
 
 CENTER_FIELDS = {
@@ -89,10 +90,9 @@ DRIVER_FIELDS = [
     (1, [500.0, 597.27, 540.0, 605.02], "driver5_kbm", "reg", 7, True),
 ]
 
-# ВОЗВРАЩАЕМ ПРОПАВШИЕ ФУНКЦИИ
 def is_inside(inner, outer):
     r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
-    return (r.x0 >= o.x0 - 0.5 and r.y0 >= o.y0 - 0.5 and r.x1 <= o.x1 + 0.5 and r.y1 <= o.y1 + 0.5)
+    return (r.x0 >= o.x0 - 1.0 and r.y0 >= o.y0 - 1.0 and r.x1 <= o.x1 + 1.0 and r.y1 <= o.y1 + 1.0)
 
 def collect_spans(page, area):
     out = []
@@ -117,8 +117,8 @@ def fill_pdf_to_memory(data):
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
     end_date = next_year - datetime.timedelta(days=1)
     
-    d_start = " ".join(list(today.strftime("%d.%m.%Y")))
-    d_end = " ".join(list(end_date.strftime("%d.%m.%Y")))
+    d_start = today.strftime("%d.%m.%Y")
+    d_end = end_date.strftime("%d.%m.%Y")
     
     data["date_issue1"] = today.strftime("%d.%m.%Y")
     data["date_issue2"] = today.strftime("%d.%m.%Y")
@@ -181,42 +181,66 @@ def fill_pdf_to_memory(data):
             r = pymupdf.Rect(rect)
             spans = collect_spans(page, r)
             
-            if key == "date_start": val = d_start
-            elif key == "date_end": val = d_end
-            elif key == "date_period_start": val = d_start
-            elif key == "date_period_end": val = d_end
-
-            if key in ["date_period_start", "date_period_end"]:
-                if not spans: continue
-                char_boxes = []
+            # --- ДАТЫ (посимвольно по старым клеткам) ---
+            if key in ["date_start", "date_end", "date_period_start", "date_period_end"]:
+                if not spans:
+                    # Если поле пустое, пишем в заданные координаты
+                    inserts.append(("box", r, val, fkey, size, False))
+                    continue
+                
+                chars = []
                 for sp in spans:
                     text = sp['text'].strip()
-                    if not all(c.isdigit() or c == '.' for c in text):
-                        continue
+                    if text in ["г.", "г", "ч.", "мин.", " "]: continue
+                    
                     x0, y0, x1, y1 = sp['bbox']
-                    if len(text) == 1: 
-                        char_boxes.append((x0, y0, x1, y1))
+                    if len(text) == 1:
+                        chars.append((x0, y0, x1, y1, text))
                     else:
                         w = (x1 - x0) / len(text)
-                        for i in range(len(text)): 
-                            char_boxes.append((x0 + i*w, y0, x0 + (i+1)*w, y1))
-                char_boxes.sort(key=lambda b: b[0])
+                        for i, ch in enumerate(text):
+                            chars.append((x0 + i*w, y0, x0 + (i+1)*w, y1, ch))
+                
+                # Оставляем только цифры и точки
+                chars = [c for c in chars if c[4].isdigit() or c[4] == "."]
+                chars.sort(key=lambda b: b[0])
+                
+                # Стираем старые
+                for (x0, y0, x1, y1, _) in chars:
+                    to_delete.append(pymupdf.Rect([x0, y0, x1, y1]))
+                    
+                # Вставляем новые
                 clean_val = val.replace(" ", "")
                 for i, ch in enumerate(clean_val):
-                    if i >= len(char_boxes): break
-                    x0, y0, x1, y1 = char_boxes[i]
-                    to_delete.append(pymupdf.Rect([x0, y0, x1, y1]))
-                    inserts.append((x0, y1 - 0.18 * size, ch, fkey, size, "char"))
-            
-            elif val:
-                to_delete.append(r)
-                is_center = key in CENTER_FIELDS
-                inserts.append((r, val, fkey, size, is_center, "box"))
-            else:
-                if key.startswith("driver") or key in ["trailer_old_x", "unlimited_checkbox", "limited_checkbox"]:
-                    if spans:
-                        for sp in spans: to_delete.append(sp["bbox"])
+                    if i >= len(chars): break
+                    x0, y0, x1, y1, _ = chars[i]
+                    inserts.append(("char", x0, y1 - 0.18 * size, ch, fkey, size))
+                continue
 
+            # --- ОСТАЛЬНЫЕ ПОЛЯ (по центру старого текста) ---
+            if spans:
+                left = min(sp["bbox"][0] for sp in spans)
+                right = max(sp["bbox"][2] for sp in spans)
+                bottom = max(sp["bbox"][3] for sp in spans)
+                
+                # Расширяем рамку стирания, чтобы стереть всё полностью
+                to_delete.append(pymupdf.Rect([left - 1, bottom - size - 1, right + 1, bottom + 1]))
+                
+                if key in CENTER_FIELDS:
+                    f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
+                    text_w = f_obj.text_length(val, fontsize=size)
+                    box_w = right - left
+                    x_new = left + (box_w - text_w) / 2 if text_w < box_w else left
+                else:
+                    x_new = left
+                    
+                baseline = bottom - 0.18 * size
+                inserts.append(("char", x_new, baseline, val, fkey, size))
+            else:
+                # Если старый текст не нашли, используем дефолтные рамки
+                inserts.append(("box", r, val, fkey, size, key in CENTER_FIELDS))
+
+        # --- ОЧИСТКА ---
         if to_delete:
             for bb in to_delete: page.add_redact_annot(bb, fill=False)
             page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
@@ -224,13 +248,16 @@ def fill_pdf_to_memory(data):
         page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
+        # --- ВСТАВКА ---
         for item in inserts:
-            if item[-1] == "char":
-                x0, baseline, val, fkey, size, _ = item
+            if item[0] == "char":
+                _, x, y, val, fkey, size = item
+                if not val: continue
                 fname = "tnewb" if fkey == "bold" else "tnew"
-                if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
-            elif item[-1] == "box":
-                r, val, fkey, size, is_center, _ = item
+                page.insert_text((x, y), val, fontname=fname, fontsize=size, color=(0,0,0))
+            
+            elif item[0] == "box":
+                _, r, val, fkey, size, is_center = item
                 if not val: continue
                 fname = "tnewb" if fkey == "bold" else "tnew"
                 
