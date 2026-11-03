@@ -35,65 +35,59 @@ COMMON_FIELDS = {
     "gosnomer":                (1, [491.31, 413.15, 546.83, 425.33], "reg", 11),
     "pts_series":              (1, [411.07, 444.77, 446.77, 452.52], "bold", 7),
     "pts_number":              (1, [499.87, 444.77, 520.83, 452.52], "bold", 7),
+    
+    # Премия (рамки достаточно широкие, чтобы цифры не наезжали)
     "premium_rub":             (1, [450.0, 56.65, 500.0, 68.83],    "bold", 11),
     "premium_kop":             (1, [510.0, 56.65, 525.5, 68.83],    "bold", 11),
+    
     "policy_series":           (1, [259.0, 88.47, 282.8, 100.65],    "bold", 11),
     "policy_number":           (1, [349.0, 88.47, 403.9, 100.65],    "bold", 11),
-    
-    # Расширенные рамки для дат, чтобы захватить все цифры
-    "date_start":              (1, [440.0, 187.21, 580.0, 197.18], "reg",  9),
-    "date_end":                (1, [440.0, 207.21, 580.0, 217.18], "reg",  9),
-    "date_period_start":       (1, [20.0, 252.21, 160.0, 262.18],    "reg",  9),
-    "date_period_end":         (1, [160.0, 252.21, 300.0, 262.18],   "reg",  9),
-    "date_issue1":             (1, [100.0, 754.3, 145.0, 762.05],   "reg",  7),
-    "date_issue2":             (1, [220.0, 754.3, 265.0, 762.05],  "reg",  7),
-    "date_design_1":           (1, [390.0, 730.34, 420.0, 739.2],  "reg",  8),
-    "date_design_2":           (1, [420.0, 730.34, 520.0, 739.2],   "reg",  8),
-    
+    "date_start":              (1, [444.75, 187.21, 563.25, 197.18], "reg",  9),
+    "date_end":                (1, [444.75, 207.21, 563.25, 217.18], "reg",  9),
+    "date_period_start":       (1, [30.0, 252.21, 145.0, 262.18],    "reg",  9),
+    "date_period_end":         (1, [165.0, 252.21, 285.0, 262.18],   "reg",  9),
+    "date_issue1":             (1, [107.0, 754.3, 138.47, 762.05],   "reg",  7),
+    "date_issue2":             (1, [228.99, 754.3, 260.46, 762.05],  "reg",  7),
+    "date_design_1":           (1, [398.75, 730.34, 418.71, 739.2],  "reg",  8),
+    "date_design_2":           (1, [418.7, 730.34, 507.84, 739.2],   "reg",  8),
     "trailer_old_x":           (1, [220.19, 375.57, 226.01, 382.21], "reg",  6),
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
-    "premium_in_words":        (1, [240.0, 730.34, 400.0, 739.2],  "reg",  8),
-    
-    # Расширенные рамки для коэффициентов
-    "tb":                      (1, [20.0, 703.77, 65.0, 711.52],     "reg",  7),
-    "kt":                      (1, [85.0, 703.77, 125.0, 711.52],    "reg",  7),
-    "kbm":                     (1, [140.0, 703.77, 180.0, 711.52],   "reg",  7),
-    "kvs":                     (1, [195.0, 703.77, 235.0, 711.52],   "reg",  7),
-    "ko":                      (1, [250.0, 703.77, 295.0, 711.52],   "reg",  7),
-    "ks":                      (1, [310.0, 703.77, 355.0, 711.52],   "reg",  7),
-    "kp":                      (1, [370.0, 703.77, 415.0, 711.52],   "reg",  7),
-    "km":                      (1, [430.0, 703.77, 475.0, 711.52],   "reg",  7),
-    "premium_total":           (1, [490.0, 703.77, 570.0, 711.52],   "reg",  7),
+    "premium_in_words":        (1, [245.54, 730.34, 398.75, 739.2],  "reg",  8),
+    "tb":                      (1, [36.0, 703.77, 49.98, 711.52],    "reg",  7),
+    "kt":                      (1, [97.61, 703.77, 109.83, 711.52],  "reg",  7),
+    "kbm":                     (1, [156.75, 703.77, 160.25, 711.52], "reg",  7),
+    "kvs":                     (1, [210.84, 703.77, 217.83, 711.52], "reg",  7),
+    "ko":                      (1, [266.08, 703.77, 280.05, 711.52], "reg",  7),
+    "ks":                      (1, [330.25, 703.77, 333.75, 711.52], "reg",  7),
+    "kp":                      (1, [388.48, 703.77, 391.98, 711.52], "reg",  7),
+    "km":                      (1, [440.42, 703.77, 452.64, 711.52], "reg",  7),
+    "premium_total_thousands": (1, [516.49, 703.77, 523.48, 711.52], "reg",  7),
+    "premium_total_kop":       (1, [523.47, 703.77, 544.47, 711.52], "reg",  7),
 }
 
 CENTER_FIELDS = {
     "premium_rub", "premium_kop", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
-    "premium_total", "trailer_new_x", "policy_series", "policy_number"
+    "premium_total_thousands", "premium_total_kop", "trailer_new_x",
+    "policy_series", "policy_number"
 }
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
 LIMITED_CHECKBOX = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
 UNLIMITED_CHECKBOX = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
 
-# ТОЧНЫЕ КООРДИНАТЫ ДЛЯ ТАБЛИЦЫ ВОДИТЕЛЕЙ (Чтобы не налезало на номер строки)
 DRIVER_FIELDS = [
-    # Ряд 1
     (1, [32.0, 555.9, 330.0, 563.65], "driver1_fio", "reg", 7, False),
-    (1, [350.0, 555.9, 480.0, 563.65], "driver1_license", "reg", 7, False),
+    (1, [350.0, 555.75, 480.0, 563.5], "driver1_license", "reg", 7, False),
     (1, [495.0, 555.9, 560.0, 563.65], "driver1_kbm", "reg", 7, True),
-    # Ряд 2
     (1, [32.0, 567.27, 330.0, 575.02], "driver2_fio", "reg", 7, False),
     (1, [350.0, 567.27, 480.0, 575.02], "driver2_license", "reg", 7, False),
     (1, [495.0, 567.27, 560.0, 575.02], "driver2_kbm", "reg", 7, True),
-    # Ряд 3
     (1, [32.0, 577.27, 330.0, 585.02], "driver3_fio", "reg", 7, False),
     (1, [350.0, 577.27, 480.0, 585.02], "driver3_license", "reg", 7, False),
     (1, [495.0, 577.27, 560.0, 585.02], "driver3_kbm", "reg", 7, True),
-    # Ряд 4
     (1, [32.0, 587.27, 330.0, 595.02], "driver4_fio", "reg", 7, False),
     (1, [350.0, 587.27, 480.0, 595.02], "driver4_license", "reg", 7, False),
     (1, [495.0, 587.27, 560.0, 595.02], "driver4_kbm", "reg", 7, True),
-    # Ряд 5
     (1, [32.0, 597.27, 330.0, 605.02], "driver5_fio", "reg", 7, False),
     (1, [350.0, 597.27, 480.0, 605.02], "driver5_license", "reg", 7, False),
     (1, [495.0, 597.27, 560.0, 605.02], "driver5_kbm", "reg", 7, True),
@@ -134,8 +128,16 @@ def fill_pdf_to_memory(data):
     data["date_design_1"] = today.strftime("%d.%m.")
     data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
 
-    data["premium_rub"] = str(data.get("premium_thousands", "")) + str(data.get("premium_hundreds", ""))
-    data["premium_total"] = str(data.get("premium_total_thousands", "")) + str(data.get("premium_total_kop", ""))
+    # Умная сборка премии для верха
+    total_str = str(data.get("premium_total_thousands", "")) + str(data.get("premium_total_kop", ""))
+    if "." in total_str:
+        rub_str, kop_str = total_str.split(".")
+    else:
+        rub_str = str(data.get("premium_thousands", "")) + str(data.get("premium_hundreds", ""))
+        kop_str = str(data.get("premium_kop", ""))
+    
+    data["premium_rub"] = rub_str
+    data["premium_kop"] = kop_str
 
     all_fields = dict(COMMON_FIELDS)
     all_fields["limited_checkbox"] = LIMITED_CHECKBOX
@@ -179,17 +181,23 @@ def fill_pdf_to_memory(data):
             if spans:
                 for sp in spans: to_delete.append(sp["bbox"])
             
-            # ДЛЯ ДАТ ТЕПЕРЬ ВСТАВЛЯЕМ ЦЕЛОЙ СТРОКОЙ (чтобы избежать разрывов)
+            # ДЛЯ ДАТ (вставляем по одной цифре/точке точно в старые клеточки)
             if key in ["date_start", "date_end", "date_period_start", "date_period_end"]:
                 if not spans: continue
-                # Убираем старые данные и ставим новые одной строкой с пробелами
-                clean_val = " ".join(list(val.replace(".", "").replace(" ", "")))
-                r = pymupdf.Rect(rect)
-                inserts.append((r, clean_val, fkey, size, False, "box"))
-            elif key in ["date_issue1", "date_issue2", "date_design_1", "date_design_2"]:
-                if not spans: continue
-                r = pymupdf.Rect(rect)
-                inserts.append((r, val, fkey, size, False, "box"))
+                char_boxes = []
+                for sp in spans:
+                    text = sp['text'].strip()
+                    x0, y0, x1, y1 = sp['bbox']
+                    if len(text) == 1: char_boxes.append((x0, y0, x1, y1))
+                    else:
+                        w = (x1 - x0) / len(text)
+                        for i in range(len(text)): char_boxes.append((x0 + i*w, y0, x0 + (i+1)*w, y1))
+                char_boxes.sort(key=lambda b: b[0])
+                clean_val = val.replace(" ", "") # Оставляем точки!
+                for i, ch in enumerate(clean_val):
+                    if i >= len(char_boxes): break
+                    x0, y0, x1, y1 = char_boxes[i]
+                    inserts.append((x0, y1 - 0.18 * size, ch, fkey, size, "char"))
             else:
                 r = pymupdf.Rect(rect)
                 is_center = key in CENTER_FIELDS
@@ -203,19 +211,24 @@ def fill_pdf_to_memory(data):
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
         for item in inserts:
-            r, val, fkey, size, is_center, _ = item
-            fname = "tnewb" if fkey == "bold" else "tnew"
-            
-            if is_center:
-                f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
-                text_w = f_obj.text_length(val, fontsize=size)
-                x_new = r.x0 + (r.width - text_w) / 2
-                if text_w >= r.width: x_new = r.x0
+            if item[-1] == "char":
+                x0, baseline, val, fkey, size, _ = item
+                fname = "tnewb" if fkey == "bold" else "tnew"
+                if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
             else:
-                x_new = r.x0
+                r, val, fkey, size, is_center, _ = item
+                fname = "tnewb" if fkey == "bold" else "tnew"
                 
-            baseline = r.y1 - 0.18 * size
-            if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
+                if is_center:
+                    f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
+                    text_w = f_obj.text_length(val, fontsize=size)
+                    x_new = r.x0 + (r.width - text_w) / 2
+                    if text_w >= r.width: x_new = r.x0
+                else:
+                    x_new = r.x0
+                    
+                baseline = r.y1 - 0.18 * size
+                if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
 
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
     doc.close()
