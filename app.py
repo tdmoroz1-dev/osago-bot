@@ -26,7 +26,6 @@ BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
-# РАСШИРЕННЫЕ КООРДИНАТЫ ДЛЯ ИДЕАЛЬНОГО ЦЕНТРИРОВАНИЯ
 FIELDS = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
     "owner_fio":               (1, [16.0, 348.83, 230.86, 361.01], "reg",  11),
@@ -53,7 +52,7 @@ FIELDS = {
     "trailer_new_x":           (1, [248.00, 375.57, 254.00, 382.21], "reg",  6),
     "premium_in_words":        (1, [245.54, 730.34, 398.75, 739.2],  "reg",  8),
     
-    # ТАБЛИЦА КОЭФФИЦИЕНТОВ
+    # Коэффициенты немного расширены для центрирования, но "Итого" возвращено на место!
     "tb":                      (1, [26.0, 703.77, 60.0, 711.52],     "reg",  7),
     "kt":                      (1, [88.0, 703.77, 120.0, 711.52],    "reg",  7),
     "kbm":                     (1, [143.0, 703.77, 174.0, 711.52],   "reg",  7),
@@ -62,15 +61,17 @@ FIELDS = {
     "ks":                      (1, [315.0, 703.77, 349.0, 711.52],   "reg",  7),
     "kp":                      (1, [373.0, 703.77, 407.0, 711.52],   "reg",  7),
     "km":                      (1, [428.0, 703.77, 465.0, 711.52],   "reg",  7),
-    "premium_total_thousands": (1, [495.0, 703.77, 525.0, 711.52],   "reg",  7),
-    "premium_total_kop":       (1, [525.0, 703.77, 555.0, 711.52],   "reg",  7),
+    
+    # ВОЗВРАЩАЕМ СТАРЫЕ КООРДИНАТЫ ДЛЯ ИТОГО, ЧТОБЫ НЕ БЫЛО НАЛОЖЕНИЯ
+    "premium_total_thousands": (1, [516.49, 703.77, 523.48, 711.52], "reg",  7),
+    "premium_total_kop":       (1, [523.47, 703.77, 544.47, 711.52], "reg",  7),
 }
 
+# ВНИМАНИЕ: Убрал из этого списка premium_total_..., чтобы они рисовались строго по своим местам, а не по центру!
 CENTER_FIELDS = {
     "premium_thousands", "premium_hundreds", "premium_kop",
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
-    "premium_total_thousands", "premium_total_kop", "trailer_new_x",
-    "policy_series", "policy_number"
+    "trailer_new_x", "policy_series", "policy_number"
 }
 
 # Поля, которые ОБЯЗАТЕЛЬНО должны иметь 2 знака после запятой
@@ -112,13 +113,12 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
         if key not in data: continue
         val = str(data[key]).strip()
         
-        # АВТО-ФОРМАТИРОВАНИЕ: Принудительно делаем 2 знака после запятой
+        # АВТО-ФОРМАТИРОВАНИЕ: Принудительно делаем 2 знака после запятой для коэффициентов
         if key in DECIMAL_FIELDS:
             try:
-                # Если пришло "1" или "1.0", превращаем в "1.00"
                 val = f"{float(val):.2f}" 
             except ValueError:
-                pass # Если там текст, оставляем как есть
+                pass
                 
         if key in ["policy_series", "policy_number"] and not val: continue
         by_page.setdefault(pno, []).append((rect, val, fkey, size, key))
