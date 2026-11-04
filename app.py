@@ -29,8 +29,8 @@ FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 FIELDS = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
     "owner_fio":               (1, [16.0, 348.83, 230.86, 361.01], "reg",  11),
-    "marka":                   (1, [64.69, 402.65, 133.3, 414.83], "reg",  11),
-    "model":                   (1, [90.89, 417.65, 140.52, 429.83], "reg",  11),
+    "marka":                   (1, [14.0, 402.65, 184.0, 414.83], "reg",  11),
+    "model":                   (1, [14.0, 417.65, 184.0, 429.83], "reg",  11),
     "vin":                     (1, [201.46, 413.15, 302.75, 425.33], "reg", 11),
     "gosnomer":                (1, [491.31, 413.15, 546.83, 425.33], "reg", 11),
     "pts_series":              (1, [411.07, 444.77, 446.77, 452.52], "bold", 7),
@@ -63,6 +63,7 @@ FIELDS = {
 }
 
 CENTER_FIELDS = {
+    "marka", "model",
     "premium_thousands", "premium_hundreds", "premium_kop",
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
     "trailer_new_x", "policy_series", "policy_number",
