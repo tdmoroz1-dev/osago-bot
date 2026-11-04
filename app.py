@@ -70,6 +70,13 @@ CENTER_FIELDS = {
 }
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
+# Таблица водителей: 5 строк, центры колонок взяты из прочерков шаблона
+DRIVER_ROWS = [(555.9, 563.65), (567.27, 575.02), (577.27, 585.02),
+               (587.27, 595.02), (597.27, 605.02)]
+# Сдвиг текста водителей вниз (в пунктах). Если всё ещё высоко - увеличь (2.0, 2.5), если низко - уменьши.
+DRIVER_DY = 1.8
+DRIVER_COLS = {"fio": (187.2, 310.0), "license": (392.8, 65.0), "kbm": (518.0, 40.0)}  # (центр, ширина)
+
 def is_inside(inner, outer):
     r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
     return (r.x0 >= o.x0 - 0.5 and r.y0 >= o.y0 - 0.5 and r.x1 <= o.x1 + 0.5 and r.y1 <= o.y1 + 0.5)
@@ -232,21 +239,13 @@ def fill_limited_pdf_to_memory(data):
     data["unlimited_checkbox"] = ""
 
     drivers = data.get("drivers", [])
-    driver_fields = [
-        (1, [30.0, 555.9, 340.0, 563.65], "driver1_fio", "reg", 7),
-        (1, [360.0, 555.75, 425.0, 563.5], "driver1_license", "reg", 7),
-        (1, [500.0, 555.9, 540.0, 563.65], "driver1_kbm", "reg", 7),
-        
-        (1, [30.0, 567.27, 340.0, 575.02], "driver2_fio", "reg", 7),
-        (1, [360.0, 567.27, 425.0, 575.02], "driver2_license", "reg", 7),
-        (1, [500.0, 567.27, 540.0, 575.02], "driver2_kbm", "reg", 7),
-        
-        (1, [30.0, 577.27, 340.0, 585.02], "driver3_fio", "reg", 7),
-        (1, [360.0, 577.27, 425.0, 585.02], "driver3_license", "reg", 7),
-        (1, [500.0, 577.27, 540.0, 585.02], "driver3_kbm", "reg", 7),
-    ]
 
-    for i, d in enumerate(drivers[:3]):
+    # Поля таблицы водителей (5 строк) строятся из DRIVER_ROWS и DRIVER_COLS
+    for i, (y0, y1) in enumerate(DRIVER_ROWS, start=1):
+        for col, (cx, w) in DRIVER_COLS.items():
+            all_fields[f"driver{i}_{col}"] = (1, [cx - w / 2, y0, cx + w / 2, y1], "reg", 7)
+
+    for i, d in enumerate(drivers[:5]):
         idx = i + 1
         data[f"driver{idx}_fio"] = d.get("fio", "")
         data[f"driver{idx}_license"] = d.get("license", "")
@@ -254,9 +253,6 @@ def fill_limited_pdf_to_memory(data):
             data[f"driver{idx}_kbm"] = f"{float(d.get('kbm', '1.00')):.2f}"
         except:
             data[f"driver{idx}_kbm"] = "1.00"
-            
-    for df in driver_fields:
-        all_fields[df[2]] = (df[0], df[1], df[3], df[4])
 
     by_page = {}
     for key, (pno, rect, fkey, size) in all_fields.items():
@@ -305,6 +301,9 @@ def fill_limited_pdf_to_memory(data):
                     inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char"))
             else:
                 is_center = True if key.startswith("driver") else (key in CENTER_FIELDS)
+                if key.startswith("driver"):
+                    # сдвиг текста вниз, чтобы он стоял по середине ячейки
+                    r = pymupdf.Rect(r.x0, r.y0 + DRIVER_DY, r.x1, r.y1 + DRIVER_DY)
                 inserts.append((r, val, fkey, size, is_center, "box"))
 
         if to_delete:
@@ -359,15 +358,15 @@ def handle_json(message):
         data["trailer_new_x"] = ""
 
     drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
-    
-    if drivers:
-        bot.reply_to(message, f"Найдено водителей: {len(drivers)}. Тип полиса: Ограниченный. ⏳ Генерирую...")
-        pdf_data = fill_limited_pdf_to_memory(data)
-    else:
-        bot.reply_to(message, "Найдено водителей: 0. Тип полиса: Неограниченный. ⏳ Генерирую...")
-        pdf_data = fill_pdf_to_memory(data)
 
     try:
+        if drivers:
+            bot.reply_to(message, f"Найдено водителей: {len(drivers)}. Тип полиса: Ограниченный. ⏳ Генерирую...")
+            pdf_data = fill_limited_pdf_to_memory(data)
+        else:
+            bot.reply_to(message, "Найдено водителей: 0. Тип полиса: Неограниченный. ⏳ Генерирую...")
+            pdf_data = fill_pdf_to_memory(data)
+
         owner = data.get("owner_fio", "Полис_ОСАГО").strip()
         safe_name = "".join([c for c in owner if c not in r'\/:*?"<>|']).strip() or "Полис_ОСАГО"
         
@@ -375,6 +374,7 @@ def handle_json(message):
         pdf_file.name = f"{safe_name}.pdf"
         bot.send_document(message.chat.id, pdf_file)
     except Exception as e:
+        traceback.print_exc()
         bot.reply_to(message, f"❌ Ошибка: {e}")
 
 @app.route('/')
