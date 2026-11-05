@@ -78,6 +78,24 @@ DRIVER_ROWS = [(555.9, 563.65), (567.27, 575.02), (577.27, 585.02),
 DRIVER_DY = 1.8
 DRIVER_COLS = {"fio": (187.2, 310.0), "license": (392.8, 65.0), "kbm": (518.0, 40.0)}  # (центр, ширина)
 
+# Подписи колонок итоговой строки: значение центрируется по реальному положению подписи на странице
+TOTAL_LABELS = {"tb": "ТБ", "kt": "КТ", "kbm": "КБМ", "kvs": "КВС", "ko": "КО",
+                "ks": "КС", "kp": "КП", "km": "КМ", "premium_total": "Итого"}
+
+def label_centers(page):
+    out = {}
+    for w in page.get_text("words", clip=pymupdf.Rect(0, 676, 600, 702)):
+        out[w[4].strip()] = (w[0] + w[2]) / 2
+    return out
+
+def snap_rect(rect, key, centers):
+    lab = TOTAL_LABELS.get(key)
+    if lab and lab in centers:
+        cx = centers[lab]
+        half = (rect[2] - rect[0]) / 2
+        return [cx - half, rect[1], cx + half, rect[3]]
+    return rect
+
 def is_inside(inner, outer):
     r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
     return (r.x0 >= o.x0 - 0.5 and r.y0 >= o.y0 - 0.5 and r.x1 <= o.x1 + 0.5 and r.y1 <= o.y1 + 0.5)
@@ -139,8 +157,10 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
+        centers = label_centers(page)
         to_delete, inserts = [], []
         for (rect, val, fkey, size, key) in items:
+            rect = snap_rect(rect, key, centers)
             spans = collect_spans(page, rect)
             if key == "trailer_old_x" and not spans: continue
             if spans:
@@ -269,8 +289,10 @@ def fill_limited_pdf_to_memory(data):
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
+        centers = label_centers(page)
         to_delete, inserts = [], []
         for (rect, val, fkey, size, key) in items:
+            rect = snap_rect(rect, key, centers)
             r = pymupdf.Rect(rect)
             spans = collect_spans(page, r)
             
