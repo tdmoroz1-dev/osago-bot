@@ -23,14 +23,11 @@ def load_font(paths):
         except: continue
     return None
 
-# Загружаем Times New Roman (для Альфы)
 REG_BUF = load_font(["times.ttf", r"C:\Windows\Fonts\times.ttf"])
 BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
-# Загружаем Tahoma (для Ингосстраха)
 THM_BUF = load_font(["tahoma.ttf", r"C:\Windows\Fonts\tahoma.ttf"])
 THM_BD_BUF = load_font(["tahomabd.ttf", r"C:\Windows\Fonts\tahomabd.ttf"])
 
-# Если Tahoma нет, используем Times как запасной
 if THM_BUF is None: THM_BUF = REG_BUF
 if THM_BD_BUF is None: THM_BD_BUF = BLD_BUF
 
@@ -39,8 +36,22 @@ FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 THM_OBJ = pymupdf.Font(fontbuffer=THM_BUF)
 THM_BD_OBJ = pymupdf.Font(fontbuffer=THM_BD_BUF)
 
+def is_inside(inner, outer):
+    r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
+    return (r.x0 >= o.x0 - 0.5 and r.y0 >= o.y0 - 0.5 and r.x1 <= o.x1 + 0.5 and r.y1 <= o.y1 + 0.5)
+
+def collect_spans(page, area):
+    out = []
+    for b in page.get_text("dict").get("blocks", []):
+        if b.get("type") != 0: continue
+        for ln in b.get("lines", []):
+            for sp in ln.get("spans", []):
+                if sp.get("text", "").strip() and is_inside(sp["bbox"], area):
+                    out.append(sp)
+    return out
+
 # =========================================================================
-# АЛЬФА (НЕ ТРОНУТА)
+# АЛЬФА (БЕЗ ИЗМЕНЕНИЙ)
 # =========================================================================
 FIELDS_ALFA = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
@@ -77,23 +88,12 @@ FIELDS_ALFA = {
     "km":                      (1, [431.0, 703.77, 465.0, 711.52],   "reg",  7),
     "premium_total":           (1, [499.0, 703.77, 559.0, 711.52],   "reg",  7),
 }
-
-CENTER_FIELDS_ALFA = {
-    "marka", "model",
-    "premium_thousands", "premium_hundreds", "premium_kop",
-    "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
-    "trailer_new_x", "policy_series", "policy_number",
-    "premium_total"
-}
+CENTER_FIELDS_ALFA = {"marka", "model", "premium_thousands", "premium_hundreds", "premium_kop", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "trailer_new_x", "policy_series", "policy_number", "premium_total"}
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
-
-DRIVER_ROWS = [(555.9, 563.65), (567.27, 575.02), (577.27, 585.02),
-               (587.27, 595.02), (597.27, 605.02)]
+DRIVER_ROWS = [(555.9, 563.65), (567.27, 575.02), (577.27, 585.02), (587.27, 595.02), (597.27, 605.02)]
 DRIVER_DY = 1.8
 DRIVER_COLS = {"fio": (187.2, 310.0), "license": (392.8, 65.0), "kbm": (518.0, 40.0)}
-
-TOTAL_LABELS = {"tb": "ТБ", "kt": "КТ", "kbm": "КБМ", "kvs": "КВС", "ko": "КО",
-                "ks": "КС", "kp": "КП", "km": "КМ", "premium_total": "Итого"}
+TOTAL_LABELS = {"tb": "ТБ", "kt": "КТ", "kbm": "КБМ", "kvs": "КВС", "ko": "КО", "ks": "КС", "kp": "КП", "km": "КМ", "premium_total": "Итого"}
 
 def label_centers(page):
     out = {}
@@ -109,27 +109,12 @@ def snap_rect(rect, key, centers):
         return [cx - half, rect[1], cx + half, rect[3]]
     return rect
 
-def is_inside(inner, outer):
-    r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
-    return (r.x0 >= o.x0 - 0.5 and r.y0 >= o.y0 - 0.5 and r.x1 <= o.x1 + 0.5 and r.y1 <= o.y1 + 0.5)
-
-def collect_spans(page, area):
-    out = []
-    for b in page.get_text("dict").get("blocks", []):
-        if b.get("type") != 0: continue
-        for ln in b.get("lines", []):
-            for sp in ln.get("spans", []):
-                if sp.get("text", "").strip() and is_inside(sp["bbox"], area):
-                    out.append(sp)
-    return out
-
 def fill_alfa_pdf(data):
     doc = pymupdf.open("template.pdf")
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
     end_date = next_year - datetime.timedelta(days=1)
-    
     data["date_start"] = today.strftime("%d.%m.%Y")
     data["date_end"] = end_date.strftime("%d.%m.%Y")
     data["date_period_start"] = data["date_start"]
@@ -145,24 +130,20 @@ def fill_alfa_pdf(data):
     total_kop = str(data.get("premium_total_kop", "")).strip()
     if not total_kop:
         total_kop = str(data.get("premium_kop", "")).strip()
-    
     if total_rub and total_kop:
         if len(total_kop) == 1: total_kop = "0" + total_kop
         data["premium_total"] = f"{total_rub}.{total_kop}"
     else:
         data["premium_total"] = total_rub
-
     data["premium_in_words"] = f"{total_rub} рублей {total_kop} копеек. Дата оформления:"
 
     by_page = {}
     for key, (pno, rect, fkey, size) in FIELDS_ALFA.items():
         if key not in data: continue
         val = str(data[key]).strip()
-        
         if key in DECIMAL_FIELDS:
-            try: val = f"{float(val):.2f}" 
+            try: val = f"{float(val):.2f}"
             except ValueError: pass
-                
         if key in ["policy_series", "policy_number"] and not val: continue
         by_page.setdefault(pno, []).append((rect, val, fkey, size, key))
 
@@ -176,7 +157,6 @@ def fill_alfa_pdf(data):
             if key == "trailer_old_x" and not spans: continue
             if spans:
                 for sp in spans: to_delete.append(sp["bbox"])
-            
             if key in ["date_start", "date_end", "date_period_start", "date_period_end", "date_issue1", "date_issue2"]:
                 if not spans: continue
                 char_boxes = []
@@ -201,10 +181,8 @@ def fill_alfa_pdf(data):
         if to_delete:
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
             page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
-
         page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
-
         for item in inserts:
             if item[-2] == "char":
                 x0, baseline, val, fkey, size, _, color = item
@@ -213,7 +191,6 @@ def fill_alfa_pdf(data):
             elif item[-2] == "box":
                 r, val, fkey, size, is_center, _, color = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
-                
                 if is_center:
                     f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
                     text_w = f_obj.text_length(val, fontsize=size)
@@ -221,10 +198,8 @@ def fill_alfa_pdf(data):
                     if text_w >= r.width: x_new = r.x0
                 else:
                     x_new = r.x0
-                    
                 baseline = r.y1 - 0.22 * size
                 if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=color)
-
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
     doc.close()
     gc.collect()
@@ -236,7 +211,6 @@ def fill_alfa_limited_pdf(data):
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
     end_date = next_year - datetime.timedelta(days=1)
-    
     data["date_start"] = today.strftime("%d.%m.%Y")
     data["date_end"] = end_date.strftime("%d.%m.%Y")
     data["date_period_start"] = data["date_start"]
@@ -252,46 +226,37 @@ def fill_alfa_limited_pdf(data):
     total_kop = str(data.get("premium_total_kop", "")).strip()
     if not total_kop:
         total_kop = str(data.get("premium_kop", "")).strip()
-    
     if total_rub and total_kop:
         if len(total_kop) == 1: total_kop = "0" + total_kop
         data["premium_total"] = f"{total_rub}.{total_kop}"
     else:
         data["premium_total"] = total_rub
-
     data["premium_in_words"] = f"{total_rub} рублей {total_kop} копеек. Дата оформления:"
 
     all_fields = dict(FIELDS_ALFA)
-    
     all_fields["limited_checkbox"] = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
     all_fields["unlimited_checkbox"] = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
     data["limited_checkbox"] = "X"
     data["unlimited_checkbox"] = ""
 
     drivers = data.get("drivers", [])
-
     for i, (y0, y1) in enumerate(DRIVER_ROWS, start=1):
         for col, (cx, w) in DRIVER_COLS.items():
             all_fields[f"driver{i}_{col}"] = (1, [cx - w / 2, y0, cx + w / 2, y1], "reg", 7)
-
     for i, d in enumerate(drivers[:5]):
         idx = i + 1
         data[f"driver{idx}_fio"] = d.get("fio", "")
         data[f"driver{idx}_license"] = d.get("license", "")
-        try:
-            data[f"driver{idx}_kbm"] = f"{float(d.get('kbm', '1.00')):.2f}"
-        except:
-            data[f"driver{idx}_kbm"] = "1.00"
+        try: data[f"driver{idx}_kbm"] = f"{float(d.get('kbm', '1.00')):.2f}"
+        except: data[f"driver{idx}_kbm"] = "1.00"
 
     by_page = {}
     for key, (pno, rect, fkey, size) in all_fields.items():
         if key not in data: continue
         val = str(data[key]).strip()
-        
         if key in DECIMAL_FIELDS:
-            try: val = f"{float(val):.2f}" 
+            try: val = f"{float(val):.2f}"
             except ValueError: pass
-                
         if key in ["policy_series", "policy_number"] and not val: continue
         by_page.setdefault(pno, []).append((rect, val, fkey, size, key))
 
@@ -303,17 +268,13 @@ def fill_alfa_limited_pdf(data):
             rect = snap_rect(rect, key, centers)
             r = pymupdf.Rect(rect)
             spans = collect_spans(page, r)
-            
             if key in ["trailer_old_x", "unlimited_checkbox", "limited_checkbox"]:
                 if spans:
                     for sp in spans: to_delete.append(sp["bbox"])
-                if val: 
-                    inserts.append((r, val, fkey, size, True, "box", (0,0,0)))
+                if val: inserts.append((r, val, fkey, size, True, "box", (0,0,0)))
                 continue
-
             if spans:
                 for sp in spans: to_delete.append(sp["bbox"])
-            
             if key in ["date_start", "date_end", "date_period_start", "date_period_end", "date_issue1", "date_issue2"]:
                 if not spans: continue
                 char_boxes = []
@@ -339,10 +300,8 @@ def fill_alfa_limited_pdf(data):
         if to_delete:
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
             page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
-
         page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
-
         for item in inserts:
             if item[-2] == "char":
                 x0, baseline, val, fkey, size, _, color = item
@@ -351,7 +310,6 @@ def fill_alfa_limited_pdf(data):
             elif item[-2] == "box":
                 r, val, fkey, size, is_center, _, color = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
-                
                 if is_center:
                     f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
                     text_w = f_obj.text_length(val, fontsize=size)
@@ -359,66 +317,53 @@ def fill_alfa_limited_pdf(data):
                     if text_w >= r.width: x_new = r.x0
                 else:
                     x_new = r.x0
-                    
                 baseline = r.y1 - 0.22 * size
                 if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=color)
-
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
     doc.close()
     gc.collect()
     return pdf_bytes
 
 # =========================================================================
-# ИНГОССТРАХ (С ИСПОЛЬЗОВАНИЕМ TAнОМА И ЦВЕТА ИЗ ШАБЛОНА)
+# ИНГОССТРАХ (С ПОЛНЫМ КОПИРОВАНИЕМ СТИЛЯ ИЗ ОРИГИНАЛА)
 # =========================================================================
 FIELDS_INGOS = {
-    "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87], "bold", 10),
-    "owner_fio":               (1, [25.0, 274.03, 500.0, 286.1], "bold", 10),
-    "marka":                   (1, [50.0, 322.47, 160.0, 334.54], "bold", 10),
-    "model":                   (1, [50.0, 334.54, 160.0, 346.61], "bold", 10),
-    "gosnomer":                (1, [465.0, 331.73, 555.0, 343.8], "bold", 10),
-    
-    "premium_str":             (1, [450.0, 40.07, 580.0, 52.14], "bold", 10),
-    "policy_number_str":       (1, [250.0, 99.02, 450.0, 115.91], "bold", 14),
-    
-    "date_start_top":          (1, [506.14, 162.21, 560.72, 171.87], "bold", 8),
-    "date_end_top":            (1, [506.14, 177.57, 560.72, 187.22], "bold", 8),
-    
-    "date_period_str":         (1, [28.35, 223.93, 194.52, 236.0], "bold", 10),
-    "pts_doc_line":            (1, [28.35, 363.31, 300.0, 372.96], "reg", 8),
-    
-    "unlimited_checkbox":      (1, [21.25, 420.22, 359.27, 429.87], "reg", 8),
-    "limited_checkbox":        (1, [21.25, 429.87, 300.0, 439.52], "reg", 8),
-    "trailer_checkbox":        (1, [250.59, 289.5, 300.92, 299.15], "reg", 8),
-    "date_issue1":             (1, [26.65, 789.27, 300.0, 798.92], "reg", 8),
-    
-    "tb":                      (1, [60.0, 667.2, 90.0, 678.07], "reg", 9),
-    "kt":                      (1, [140.0, 667.2, 170.0, 678.07], "reg", 9),
-    "kbm":                     (1, [190.0, 667.2, 220.0, 678.07], "reg", 9),
-    "kvs":                     (1, [240.0, 667.2, 270.0, 678.07], "reg", 9),
-    "ko":                      (1, [295.0, 667.2, 325.0, 678.07], "reg", 9),
-    "ks":                      (1, [350.0, 667.2, 380.0, 678.07], "reg", 9),
-    "kp":                      (1, [400.0, 667.2, 430.0, 678.07], "reg", 9),
-    "km":                      (1, [450.0, 667.2, 480.0, 678.07], "reg", 9),
-    "premium_total":           (1, [510.0, 667.2, 570.0, 678.07], "reg", 9),
+    "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87]),
+    "owner_fio":               (1, [25.0, 274.03, 500.0, 286.1]),
+    "marka":                   (1, [50.0, 322.47, 160.0, 334.54]),
+    "model":                   (1, [50.0, 334.54, 160.0, 346.61]),
+    "gosnomer":                (1, [465.0, 331.73, 555.0, 343.8]),
+    "premium_str":             (1, [450.0, 40.07, 580.0, 52.14]),
+    "policy_number_str":       (1, [250.0, 99.02, 450.0, 115.91]),
+    "date_start_top":          (1, [506.14, 162.21, 560.72, 171.87]),
+    "date_end_top":            (1, [506.14, 177.57, 560.72, 187.22]),
+    "date_period_str":         (1, [28.35, 223.93, 194.52, 236.0]),
+    "pts_doc_line":            (1, [28.35, 363.31, 300.0, 372.96]),
+    "unlimited_checkbox":      (1, [21.25, 420.22, 359.27, 429.87]),
+    "limited_checkbox":        (1, [21.25, 429.87, 300.0, 439.52]),
+    "trailer_checkbox":        (1, [250.59, 289.5, 300.92, 299.15]),
+    "date_issue1":             (1, [26.65, 789.27, 300.0, 798.92]),
+    "tb":                      (1, [60.0, 667.2, 90.0, 678.07]),
+    "kt":                      (1, [140.0, 667.2, 170.0, 678.07]),
+    "kbm":                     (1, [190.0, 667.2, 220.0, 678.07]),
+    "kvs":                     (1, [240.0, 667.2, 270.0, 678.07]),
+    "ko":                      (1, [295.0, 667.2, 325.0, 678.07]),
+    "ks":                      (1, [350.0, 667.2, 380.0, 678.07]),
+    "kp":                      (1, [400.0, 667.2, 430.0, 678.07]),
+    "km":                      (1, [450.0, 667.2, 480.0, 678.07]),
+    "premium_total":           (1, [510.0, 667.2, 570.0, 678.07]),
 }
-CENTER_FIELDS_INGOS = {
-    "marka", "model", "gosnomer", "policy_number_str", "premium_str",
-    "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"
-}
+CENTER_FIELDS_INGOS = {"marka", "model", "gosnomer", "policy_number_str", "premium_str", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"}
 
-def get_ingos_blue(page):
-    for block in page.get_text("dict").get("blocks", []):
-        if block.get("type") != 0: continue
-        for line in block.get("lines", []):
-            for span in line.get("spans", []):
-                if "ЭЛЕКТРОННЫЙ" in span["text"]:
-                    c = span["color"]
-                    r = ((c >> 16) & 255) / 255.0
-                    g = ((c >> 8) & 255) / 255.0
-                    b_col = (c & 255) / 255.0
-                    return (r, g, b_col)
-    return (0.0, 0.16, 0.42)
+def get_font_name(font_str):
+    if "Tahoma" in font_str:
+        return "thmb" if "Bold" in font_str or "Bd" in font_str else "thm"
+    if "Times" in font_str:
+        return "tnewb" if "Bold" in font_str else "tnew"
+    return "thm" # fallback
+
+def int_to_rgb(c):
+    return ((c >> 16) & 255) / 255.0, ((c >> 8) & 255) / 255.0, (c & 255) / 255.0
 
 def ingos_vin_cells(page):
     cells = []
@@ -427,20 +372,17 @@ def ingos_vin_cells(page):
             r = d["rect"]
             if 316 < r.y0 < 340 and 318 < r.y1 < 344 and 8 < r.width < 25 and 8 < r.height < 25:
                 cells.append(pymupdf.Rect(r))
-    except Exception:
-        pass
+    except Exception: pass
     cells.sort(key=lambda r: r.x0)
     if cells:
         chain = [cells[0]]
         for r in cells[1:]:
-            if r.x0 - chain[-1].x0 < 30:
-                chain.append(r)
+            if r.x0 - chain[-1].x0 < 30: chain.append(r)
         cells = chain
     return cells
 
 def fill_ingos_pdf(data):
     doc = pymupdf.open("template_ingos.pdf")
-    ingos_blue = get_ingos_blue(doc[0])
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
@@ -452,19 +394,16 @@ def fill_ingos_pdf(data):
     total_kop = str(data.get("premium_total_kop", "")).strip()
     if not total_kop:
         total_kop = str(data.get("premium_kop", "")).strip()
-
     if total_rub and total_kop:
         if len(total_kop) == 1: total_kop = "0" + total_kop
         formatted_total = f"{total_rub}.{total_kop}"
     else:
         formatted_total = total_rub
 
-    months = ["января", "февраля", "марта", "апреля", "мая", "июня",
-              "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+    months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
     month_name = months[today.month - 1]
 
     data["premium_str"] = f"{total_rub} руб. {total_kop} коп."
-
     series = str(data.get('policy_series', '')).strip()
     number = str(data.get('policy_number', '')).strip()
     if series or number:
@@ -488,7 +427,6 @@ def fill_ingos_pdf(data):
     else:
         data["unlimited_checkbox"] = "[V] неограниченного количества лиц, допущенных к управлению транспортным средством"
         data["limited_checkbox"] = "[ ] лиц, допущенных к управлению транспортным средством"
-
     if data.get("trailer", "").lower() == "нет":
         data["trailer_checkbox"] = "[] да, [X] нет."
     else:
@@ -498,51 +436,55 @@ def fill_ingos_pdf(data):
         tot_r = int(float(formatted_total))
         tot_k = int(round((float(formatted_total) - tot_r) * 100))
         data["premium_total"] = f"{tot_r:,}".replace(',', ' ') + f",{tot_k:02d}"
-    except:
-        data["premium_total"] = formatted_total
+    except: data["premium_total"] = formatted_total
 
     all_fields = dict(FIELDS_INGOS)
-
     driver_rows = [(483.44, 495.51), (496.01, 508.08), (508.58, 520.65), (521.15, 533.22), (533.72, 545.79)]
     if drivers:
         for i, d in enumerate(drivers[:5]):
             y0, y1 = driver_rows[i]
-            all_fields[f"driver{i+1}_fio"] = (1, [60.0, y0, 425.0, y1], "reg", 10)
-            all_fields[f"driver{i+1}_license"] = (1, [430.0, y0, 520.0, y1], "reg", 10)
-            all_fields[f"driver{i+1}_kbm"] = (1, [525.0, y0, 560.0, y1], "reg", 10)
+            all_fields[f"driver{i+1}_fio"] = (1, [60.0, y0, 425.0, y1])
+            all_fields[f"driver{i+1}_license"] = (1, [430.0, y0, 520.0, y1])
+            all_fields[f"driver{i+1}_kbm"] = (1, [525.0, y0, 560.0, y1])
             data[f"driver{i+1}_fio"] = d.get("fio", "")
             data[f"driver{i+1}_license"] = d.get("license", "")
             try: data[f"driver{i+1}_kbm"] = f"{float(d.get('kbm', '1.00')):.2f}"
             except: data[f"driver{i+1}_kbm"] = "1.00"
 
     by_page = {}
-    for key, (pno, rect, fkey, size) in all_fields.items():
+    for key, (pno, rect) in all_fields.items():
         if key not in data: continue
         val = str(data[key]).strip()
         if key in DECIMAL_FIELDS:
             try: val = f"{float(val):.2f}"
             except ValueError: pass
-        by_page.setdefault(pno, []).append((rect, val, fkey, size, key))
+        by_page.setdefault(pno, []).append((rect, val, key))
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
         to_delete, inserts, vin_inserts = [], [], []
 
+        # ---------- VIN ----------
         if pno == 1 and vin_val:
             VIN_RECT = [186, 318, 440, 340]
             vspans = collect_spans(page, VIN_RECT)
-            for sp in vspans:
-                to_delete.append(sp["bbox"])
+            for sp in vspans: to_delete.append(sp["bbox"])
             
             cells = ingos_vin_cells(page)
+            vfont, vsize, vcolor = "thmb", 11, (0,0,0)
+            if vspans:
+                vfont = get_font_name(vspans[0]["font"])
+                vsize = vspans[0]["size"]
+                vcolor = int_to_rgb(vspans[0]["color"])
             
             if len(cells) >= 17:
                 for i, ch in enumerate(vin_val):
                     cell = cells[i]
-                    w = THM_BD_OBJ.text_length(ch, fontsize=11)
+                    # Определяем ширину с учетом реального шрифта (приблизительно)
+                    w = THM_BD_OBJ.text_length(ch, fontsize=vsize)
                     x = cell.x0 + (cell.width - w) / 2
-                    y = cell.y1 - 3.5
-                    vin_inserts.append((x, y, ch))
+                    y = cell.y1 - vsize * 0.25
+                    vin_inserts.append((x, y, ch, vfont, vsize, vcolor))
             else:
                 boxes = []
                 for sp in vspans:
@@ -550,35 +492,40 @@ def fill_ingos_pdf(data):
                     x0, y0, x1, y1 = sp["bbox"]
                     w = (x1 - x0) / len(t)
                     for i, ch in enumerate(t):
-                        if ch.isalnum():
-                            boxes.append((x0 + i*w, x0 + (i+1)*w))
+                        if ch.isalnum(): boxes.append((x0 + i*w, x0 + (i+1)*w))
                 boxes.sort()
-                
                 if len(boxes) >= 17:
                     c0 = (boxes[0][0] + boxes[0][1]) / 2
                     cN = (boxes[-1][0] + boxes[-1][1]) / 2
                     p = (cN - c0) / 16
                     centers = [c0 + i * p for i in range(17)]
                 else:
-                    c0 = 198.4
-                    p = 14.05
+                    c0 = 198.4; p = 14.05
                     centers = [c0 + i * p for i in range(17)]
-
                 for i, ch in enumerate(vin_val):
                     if i < len(centers):
-                        w = THM_BD_OBJ.text_length(ch, fontsize=11)
-                        vin_inserts.append((centers[i] - w / 2, 332.5, ch))
+                        w = THM_BD_OBJ.text_length(ch, fontsize=vsize)
+                        vin_inserts.append((centers[i] - w / 2, 332.5, ch, vfont, vsize, vcolor))
 
-        for (rect, val, fkey, size, key) in items:
+        # ---------- Остальные поля ----------
+        for (rect, val, key) in items:
             r = pymupdf.Rect(rect)
             spans = collect_spans(page, r)
+            
+            # Стиль по умолчанию
+            fname = "thm"
+            fsize = 10
+            fcolor = (0,0,0)
+            
             if spans:
+                # Берем стиль из первого найденного span
+                fname = get_font_name(spans[0]["font"])
+                fsize = spans[0]["size"]
+                fcolor = int_to_rgb(spans[0]["color"])
                 for sp in spans: to_delete.append(sp["bbox"])
+            
             is_center = (key in CENTER_FIELDS_INGOS) or key.startswith("driver")
-            
-            text_color = ingos_blue if key in ["policy_number_str", "premium_str"] else (0,0,0)
-            
-            inserts.append((r, val, fkey, size, is_center, "box", text_color))
+            inserts.append((r, val, fname, fsize, is_center, fcolor))
 
         if to_delete:
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
@@ -587,20 +534,26 @@ def fill_ingos_pdf(data):
         page.insert_font(fontname="thm", fontbuffer=THM_BUF)
         page.insert_font(fontname="thmb", fontbuffer=THM_BD_BUF)
 
-        for x, b, ch in vin_inserts:
-            page.insert_text((x, b), ch, fontname="thmb", fontsize=11, color=(0,0,0))
+        # Вставка VIN
+        for x, b, ch, fnt, sz, col in vin_inserts:
+            page.insert_text((x, b), ch, fontname=fnt, fontsize=sz, color=col)
 
+        # Вставка остальных
         for item in inserts:
-            r, val, fkey, size, is_center, _, color = item
+            r, val, fname, size, is_center, color = item
             if not val: continue
-            fname = "thmb" if fkey == "bold" else "thm"
+            
+            # Вычисляем ширину текста для центрирования
+            # Используем соответствующий объект шрифта
+            f_obj = THM_BD_OBJ if fname == "thmb" else THM_OBJ
+            text_w = f_obj.text_length(val, fontsize=size)
+            
             if is_center:
-                f_obj = THM_BD_OBJ if fkey == "bold" else THM_OBJ
-                text_w = f_obj.text_length(val, fontsize=size)
                 x_new = r.x0 + (r.width - text_w) / 2
                 if text_w >= r.width: x_new = r.x0
             else:
                 x_new = r.x0
+                
             baseline = r.y1 - 0.22 * size
             page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=color)
 
@@ -612,7 +565,6 @@ def fill_ingos_pdf(data):
 # =========================================================================
 # ИНТЕРФЕЙС БОТА
 # =========================================================================
-
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     markup = types.InlineKeyboardMarkup(row_width=2)
