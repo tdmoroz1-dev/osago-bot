@@ -40,18 +40,26 @@ def is_inside(inner, outer):
     r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
     return (r.x0 >= o.x0 - 0.5 and r.y0 >= o.y0 - 0.5 and r.x1 <= o.x1 + 0.5 and r.y1 <= o.y1 + 0.5)
 
-def collect_spans(page, area):
+# ОПТИМИЗАЦИЯ: Теперь мы просто фильтруем готовый список спанов, а не парсим страницу заново
+def get_all_spans(page):
     out = []
     for b in page.get_text("dict").get("blocks", []):
         if b.get("type") != 0: continue
         for ln in b.get("lines", []):
             for sp in ln.get("spans", []):
-                if sp.get("text", "").strip() and is_inside(sp["bbox"], area):
+                if sp.get("text", "").strip():
                     out.append(sp)
     return out
 
+def collect_spans(all_spans, area):
+    out = []
+    for sp in all_spans:
+        if is_inside(sp["bbox"], area):
+            out.append(sp)
+    return out
+
 # =========================================================================
-# АЛЬФА (БЕЗ ИЗМЕНЕНИЙ)
+# АЛЬФА
 # =========================================================================
 FIELDS_ALFA = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
@@ -149,11 +157,12 @@ def fill_alfa_pdf(data):
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
+        all_spans = get_all_spans(page) # <--- ОДИН РАЗ СКАНИРУЕМ
         centers = label_centers(page)
         to_delete, inserts = [], []
         for (rect, val, fkey, size, key) in items:
             rect = snap_rect(rect, key, centers)
-            spans = collect_spans(page, rect)
+            spans = collect_spans(all_spans, rect) # <--- БЫСТРАЯ ФИЛЬТРАЦИЯ
             if key == "trailer_old_x" and not spans: continue
             if spans:
                 for sp in spans: to_delete.append(sp["bbox"])
@@ -262,12 +271,13 @@ def fill_alfa_limited_pdf(data):
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
+        all_spans = get_all_spans(page) # <--- ОДИН РАЗ СКАНИРУЕМ
         centers = label_centers(page)
         to_delete, inserts = [], []
         for (rect, val, fkey, size, key) in items:
             rect = snap_rect(rect, key, centers)
             r = pymupdf.Rect(rect)
-            spans = collect_spans(page, r)
+            spans = collect_spans(all_spans, r) # <--- БЫСТРАЯ ФИЛЬТРАЦИЯ
             if key in ["trailer_old_x", "unlimited_checkbox", "limited_checkbox"]:
                 if spans:
                     for sp in spans: to_delete.append(sp["bbox"])
@@ -344,7 +354,6 @@ FIELDS_INGOS = {
     "trailer_checkbox":        (1, [250.59, 289.5, 300.92, 299.15]),
     "date_issue1":             (1, [26.65, 789.27, 300.0, 798.92]),
     "contract_date_line":      (1, [28.35, 744.16, 500.0, 753.81]),
-    
     "tb":                      (1, [60.0, 667.2, 90.0, 678.07]),
     "kt":                      (1, [135.0, 667.2, 168.0, 678.07]),
     "kbm":                     (1, [188.0, 667.2, 220.0, 678.07]),
@@ -353,7 +362,6 @@ FIELDS_INGOS = {
     "ks":                      (1, [344.0, 667.2, 378.0, 678.07]),
     "kp":                      (1, [397.0, 667.2, 430.0, 678.07]),
     "km":                      (1, [449.0, 667.2, 483.0, 678.07]),
-    
     "premium_total":           (1, [500.0, 667.2, 570.0, 678.07]),
 }
 CENTER_FIELDS_INGOS = {"marka", "model", "gosnomer", "policy_number_str", "premium_str", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"}
@@ -423,7 +431,6 @@ def fill_ingos_pdf(data):
     data["date_end_top"] = f"{end_date.strftime('%d.%m.%Y')} г."
     data["date_period_str"] = f"с {today.strftime('%d.%m.%Y')} г. по {end_date.strftime('%d.%m.%Y')} г."
     data["pts_doc_line"] = f"Вид документа ПАСПОРТ ТС серия {data.get('pts_series', '')} номер {data.get('pts_number', '')}"
-    
     data["date_issue1"] = f"Дата выдачи полиса «{msk_now.day}» {month_name} {msk_now.year} г."
     data["contract_date_line"] = f"Дата заключения договора «{msk_now.day}» {month_name} {msk_now.year} г. ({msk_now.strftime('%d.%m.%Y')} в {msk_now.strftime('%H:%M')} по московскому времени)"
 
@@ -469,11 +476,12 @@ def fill_ingos_pdf(data):
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
+        all_spans = get_all_spans(page) # <--- ОДИН РАЗ СКАНИРУЕМ
         to_delete, inserts, vin_inserts = [], [], []
 
         if pno == 1 and vin_val:
             VIN_RECT = [186, 318, 440, 340]
-            vspans = collect_spans(page, VIN_RECT)
+            vspans = collect_spans(all_spans, VIN_RECT) # <--- БЫСТРАЯ ФИЛЬТРАЦИЯ
             for sp in vspans: to_delete.append(sp["bbox"])
             
             cells = ingos_vin_cells(page)
@@ -514,7 +522,7 @@ def fill_ingos_pdf(data):
 
         for (rect, val, key) in items:
             r = pymupdf.Rect(rect)
-            spans = collect_spans(page, r)
+            spans = collect_spans(all_spans, r) # <--- БЫСТРАЯ ФИЛЬТРАЦИЯ
             
             fname = "thm"
             fsize = 10
@@ -569,24 +577,16 @@ def fill_ingos_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# ИНТЕРФЕЙС БОТА (ТЕПЕРЬ С КНОПКАМИ ВНИЗУ)
+# ИНТЕРФЕЙС
 # =========================================================================
-
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    # Создаем Reply-клавиатуру (она висит внизу)
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn_alfa = types.KeyboardButton("🔴 АльфаСтрахование")
     btn_ingo = types.KeyboardButton("🔵 Ингосстрах")
     markup.add(btn_alfa, btn_ingo)
-    
-    bot.send_message(
-        message.chat.id, 
-        "👋 Привет! Выбери страховую компанию на клавиатуре внизу:", 
-        reply_markup=markup
-    )
+    bot.send_message(message.chat.id, "👋 Привет! Выбери страховую компанию на клавиатуре внизу:", reply_markup=markup)
 
-# Обработчик нажатия на кнопки клавиатуры
 @bot.message_handler(func=lambda message: message.text in ["🔴 АльфаСтрахование", "🔵 Ингосстрах"])
 def handle_company_choice(message):
     if "Альфа" in message.text:
@@ -596,10 +596,8 @@ def handle_company_choice(message):
         user_choices[message.from_user.id] = "ingo"
         bot.reply_to(message, "✅ Выбрано: *Ингосстрах*.\n\nТеперь пришли мне JSON с данными.", parse_mode='Markdown')
 
-# Обработчик текста (JSON)
 @bot.message_handler(content_types=['text'])
 def handle_json(message):
-    # Если это текст от кнопки, пропускаем (его уже обработал предыдущий handler)
     if message.text in ["🔴 АльфаСтрахование", "🔵 Ингосстрах"]:
         return
         
