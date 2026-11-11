@@ -325,7 +325,7 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# ИНГОССТРАХ (С ИСПРАВЛЕНИЯМИ: ЗНАК №, ЦЕНТРОВКА, ДАТА)
+# ИНГОССТРАХ (С РАСШИРЕННОЙ РАМКОЙ ДЛЯ "ИТОГО")
 # =========================================================================
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87]),
@@ -343,11 +343,8 @@ FIELDS_INGOS = {
     "limited_checkbox":        (1, [21.25, 429.87, 300.0, 439.52]),
     "trailer_checkbox":        (1, [250.59, 289.5, 300.92, 299.15]),
     "date_issue1":             (1, [26.65, 789.27, 300.0, 798.92]),
-    
-    # НОВОЕ ПОЛЕ: Дата заключения договора (внизу)
     "contract_date_line":      (1, [28.35, 744.16, 500.0, 753.81]),
     
-    # Коэффициенты (выровнены по центрам надписей)
     "tb":                      (1, [60.0, 667.2, 90.0, 678.07]),
     "kt":                      (1, [135.0, 667.2, 168.0, 678.07]),
     "kbm":                     (1, [188.0, 667.2, 220.0, 678.07]),
@@ -356,7 +353,9 @@ FIELDS_INGOS = {
     "ks":                      (1, [344.0, 667.2, 378.0, 678.07]),
     "kp":                      (1, [397.0, 667.2, 430.0, 678.07]),
     "km":                      (1, [449.0, 667.2, 483.0, 678.07]),
-    "premium_total":           (1, [518.0, 667.2, 553.0, 678.07]),
+    
+    # ИСПРАВЛЕНИЕ: Расширили рамку для Итого, чтобы стереть старые данные полностью (до x=570)
+    "premium_total":           (1, [500.0, 667.2, 570.0, 678.07]),
 }
 CENTER_FIELDS_INGOS = {"marka", "model", "gosnomer", "policy_number_str", "premium_str", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"}
 
@@ -393,7 +392,6 @@ def fill_ingos_pdf(data):
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
     end_date = next_year - datetime.timedelta(days=1)
 
-    # Получаем текущее время по Москве для договора
     msk_now = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
     months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
     month_name = months[msk_now.month - 1]
@@ -414,8 +412,6 @@ def fill_ingos_pdf(data):
     
     series = str(data.get('policy_series', '')).strip()
     number = str(data.get('policy_number', '')).strip()
-    
-    # ИСПРАВЛЕНИЕ 1: ВОЗВРАЩАЕМ ЗНАК "№"
     if series or number:
         data["policy_number_str"] = f"№  {series} {number}".strip()
     else:
@@ -429,7 +425,6 @@ def fill_ingos_pdf(data):
     data["date_period_str"] = f"с {today.strftime('%d.%m.%Y')} г. по {end_date.strftime('%d.%m.%Y')} г."
     data["pts_doc_line"] = f"Вид документа ПАСПОРТ ТС серия {data.get('pts_series', '')} номер {data.get('pts_number', '')}"
     
-    # ИСПРАВЛЕНИЕ 3: СТАВИМ АКТУАЛЬНУЮ ДАТУ ЗАКЛЮЧЕНИЯ ДОГОВОРА
     data["date_issue1"] = f"Дата выдачи полиса «{msk_now.day}» {month_name} {msk_now.year} г."
     data["contract_date_line"] = f"Дата заключения договора «{msk_now.day}» {month_name} {msk_now.year} г. ({msk_now.strftime('%d.%m.%Y')} в {msk_now.strftime('%H:%M')} по московскому времени)"
 
