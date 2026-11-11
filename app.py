@@ -325,7 +325,7 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# ИНГОССТРАХ (С ПОЛНЫМ КОПИРОВАНИЕМ СТИЛЯ ИЗ ОРИГИНАЛА)
+# ИНГОССТРАХ (С ИСПРАВЛЕНИЯМИ: ЗНАК №, ЦЕНТРОВКА, ДАТА)
 # =========================================================================
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87]),
@@ -343,15 +343,20 @@ FIELDS_INGOS = {
     "limited_checkbox":        (1, [21.25, 429.87, 300.0, 439.52]),
     "trailer_checkbox":        (1, [250.59, 289.5, 300.92, 299.15]),
     "date_issue1":             (1, [26.65, 789.27, 300.0, 798.92]),
+    
+    # НОВОЕ ПОЛЕ: Дата заключения договора (внизу)
+    "contract_date_line":      (1, [28.35, 744.16, 500.0, 753.81]),
+    
+    # Коэффициенты (выровнены по центрам надписей)
     "tb":                      (1, [60.0, 667.2, 90.0, 678.07]),
-    "kt":                      (1, [140.0, 667.2, 170.0, 678.07]),
-    "kbm":                     (1, [190.0, 667.2, 220.0, 678.07]),
-    "kvs":                     (1, [240.0, 667.2, 270.0, 678.07]),
-    "ko":                      (1, [295.0, 667.2, 325.0, 678.07]),
-    "ks":                      (1, [350.0, 667.2, 380.0, 678.07]),
-    "kp":                      (1, [400.0, 667.2, 430.0, 678.07]),
-    "km":                      (1, [450.0, 667.2, 480.0, 678.07]),
-    "premium_total":           (1, [510.0, 667.2, 570.0, 678.07]),
+    "kt":                      (1, [135.0, 667.2, 168.0, 678.07]),
+    "kbm":                     (1, [188.0, 667.2, 220.0, 678.07]),
+    "kvs":                     (1, [240.0, 667.2, 273.0, 678.07]),
+    "ko":                      (1, [292.0, 667.2, 326.0, 678.07]),
+    "ks":                      (1, [344.0, 667.2, 378.0, 678.07]),
+    "kp":                      (1, [397.0, 667.2, 430.0, 678.07]),
+    "km":                      (1, [449.0, 667.2, 483.0, 678.07]),
+    "premium_total":           (1, [518.0, 667.2, 553.0, 678.07]),
 }
 CENTER_FIELDS_INGOS = {"marka", "model", "gosnomer", "policy_number_str", "premium_str", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"}
 
@@ -360,7 +365,7 @@ def get_font_name(font_str):
         return "thmb" if "Bold" in font_str or "Bd" in font_str else "thm"
     if "Times" in font_str:
         return "tnewb" if "Bold" in font_str else "tnew"
-    return "thm" # fallback
+    return "thm"
 
 def int_to_rgb(c):
     return ((c >> 16) & 255) / 255.0, ((c >> 8) & 255) / 255.0, (c & 255) / 255.0
@@ -388,6 +393,11 @@ def fill_ingos_pdf(data):
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
     end_date = next_year - datetime.timedelta(days=1)
 
+    # Получаем текущее время по Москве для договора
+    msk_now = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
+    months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+    month_name = months[msk_now.month - 1]
+
     total_rub = str(data.get("premium_total_thousands", "")).strip()
     if not total_rub:
         total_rub = str(data.get("premium_thousands", "")).strip() + str(data.get("premium_hundreds", "")).strip()
@@ -400,16 +410,16 @@ def fill_ingos_pdf(data):
     else:
         formatted_total = total_rub
 
-    months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
-    month_name = months[today.month - 1]
-
     data["premium_str"] = f"{total_rub} руб. {total_kop} коп."
+    
     series = str(data.get('policy_series', '')).strip()
     number = str(data.get('policy_number', '')).strip()
+    
+    # ИСПРАВЛЕНИЕ 1: ВОЗВРАЩАЕМ ЗНАК "№"
     if series or number:
-        data["policy_number_str"] = f"{series} {number}".strip()
+        data["policy_number_str"] = f"№  {series} {number}".strip()
     else:
-        data["policy_number_str"] = "ХХХ 0604558947"
+        data["policy_number_str"] = "№  ХХХ 0604558947"
 
     vin_val = "".join(str(data.get("vin", "")).split()).upper()
     data.pop("vin", None)
@@ -418,7 +428,10 @@ def fill_ingos_pdf(data):
     data["date_end_top"] = f"{end_date.strftime('%d.%m.%Y')} г."
     data["date_period_str"] = f"с {today.strftime('%d.%m.%Y')} г. по {end_date.strftime('%d.%m.%Y')} г."
     data["pts_doc_line"] = f"Вид документа ПАСПОРТ ТС серия {data.get('pts_series', '')} номер {data.get('pts_number', '')}"
-    data["date_issue1"] = f"Дата выдачи полиса «{today.day}» {month_name} {today.year} г."
+    
+    # ИСПРАВЛЕНИЕ 3: СТАВИМ АКТУАЛЬНУЮ ДАТУ ЗАКЛЮЧЕНИЯ ДОГОВОРА
+    data["date_issue1"] = f"Дата выдачи полиса «{msk_now.day}» {month_name} {msk_now.year} г."
+    data["contract_date_line"] = f"Дата заключения договора «{msk_now.day}» {month_name} {msk_now.year} г. ({msk_now.strftime('%d.%m.%Y')} в {msk_now.strftime('%H:%M')} по московскому времени)"
 
     drivers = data.get("drivers", [])
     if drivers:
@@ -480,10 +493,9 @@ def fill_ingos_pdf(data):
             if len(cells) >= 17:
                 for i, ch in enumerate(vin_val):
                     cell = cells[i]
-                    # Определяем ширину с учетом реального шрифта (приблизительно)
                     w = THM_BD_OBJ.text_length(ch, fontsize=vsize)
                     x = cell.x0 + (cell.width - w) / 2
-                    y = cell.y1 - vsize * 0.25
+                    y = cell.y1 - 3.5
                     vin_inserts.append((x, y, ch, vfont, vsize, vcolor))
             else:
                 boxes = []
@@ -512,16 +524,23 @@ def fill_ingos_pdf(data):
             r = pymupdf.Rect(rect)
             spans = collect_spans(page, r)
             
-            # Стиль по умолчанию
             fname = "thm"
             fsize = 10
             fcolor = (0,0,0)
             
             if spans:
-                # Берем стиль из первого найденного span
-                fname = get_font_name(spans[0]["font"])
-                fsize = spans[0]["size"]
-                fcolor = int_to_rgb(spans[0]["color"])
+                if key in ["policy_number_str", "premium_str"]:
+                    spans_sorted = sorted(spans, key=lambda s: s["bbox"][0])
+                    if key == "premium_str": target_span = spans_sorted[0]
+                    else: target_span = spans_sorted[-1]
+                    fname = get_font_name(target_span["font"])
+                    fsize = target_span["size"]
+                    fcolor = int_to_rgb(target_span["color"])
+                else:
+                    fname = get_font_name(spans[0]["font"])
+                    fsize = spans[0]["size"]
+                    fcolor = int_to_rgb(spans[0]["color"])
+                
                 for sp in spans: to_delete.append(sp["bbox"])
             
             is_center = (key in CENTER_FIELDS_INGOS) or key.startswith("driver")
@@ -534,17 +553,12 @@ def fill_ingos_pdf(data):
         page.insert_font(fontname="thm", fontbuffer=THM_BUF)
         page.insert_font(fontname="thmb", fontbuffer=THM_BD_BUF)
 
-        # Вставка VIN
         for x, b, ch, fnt, sz, col in vin_inserts:
             page.insert_text((x, b), ch, fontname=fnt, fontsize=sz, color=col)
 
-        # Вставка остальных
         for item in inserts:
             r, val, fname, size, is_center, color = item
             if not val: continue
-            
-            # Вычисляем ширину текста для центрирования
-            # Используем соответствующий объект шрифта
             f_obj = THM_BD_OBJ if fname == "thmb" else THM_OBJ
             text_w = f_obj.text_length(val, fontsize=size)
             
