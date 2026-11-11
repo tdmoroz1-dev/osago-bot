@@ -325,7 +325,7 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# ИНГОССТРАХ (С РАСШИРЕННОЙ РАМКОЙ ДЛЯ "ИТОГО")
+# ИНГОССТРАХ
 # =========================================================================
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87]),
@@ -354,7 +354,6 @@ FIELDS_INGOS = {
     "kp":                      (1, [397.0, 667.2, 430.0, 678.07]),
     "km":                      (1, [449.0, 667.2, 483.0, 678.07]),
     
-    # ИСПРАВЛЕНИЕ: Расширили рамку для Итого, чтобы стереть старые данные полностью (до x=570)
     "premium_total":           (1, [500.0, 667.2, 570.0, 678.07]),
 }
 CENTER_FIELDS_INGOS = {"marka", "model", "gosnomer", "policy_number_str", "premium_str", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"}
@@ -472,7 +471,6 @@ def fill_ingos_pdf(data):
         page = doc[pno - 1]
         to_delete, inserts, vin_inserts = [], [], []
 
-        # ---------- VIN ----------
         if pno == 1 and vin_val:
             VIN_RECT = [186, 318, 440, 340]
             vspans = collect_spans(page, VIN_RECT)
@@ -514,7 +512,6 @@ def fill_ingos_pdf(data):
                         w = THM_BD_OBJ.text_length(ch, fontsize=vsize)
                         vin_inserts.append((centers[i] - w / 2, 332.5, ch, vfont, vsize, vcolor))
 
-        # ---------- Остальные поля ----------
         for (rect, val, key) in items:
             r = pymupdf.Rect(rect)
             spans = collect_spans(page, r)
@@ -572,33 +569,48 @@ def fill_ingos_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# ИНТЕРФЕЙС БОТА
+# ИНТЕРФЕЙС БОТА (ТЕПЕРЬ С КНОПКАМИ ВНИЗУ)
 # =========================================================================
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    btn_alfa = types.InlineKeyboardButton("🔵 АльфаСтрахование", callback_data="set_alfa")
-    btn_ingo = types.InlineKeyboardButton("🟢 Ингосстрах", callback_data="set_ingo")
+    # Создаем Reply-клавиатуру (она висит внизу)
+    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    btn_alfa = types.KeyboardButton("🔴 АльфаСтрахование")
+    btn_ingo = types.KeyboardButton("🔵 Ингосстрах")
     markup.add(btn_alfa, btn_ingo)
-    bot.send_message(message.chat.id, "👋 Привет! Выбери страховую компанию:", reply_markup=markup)
+    
+    bot.send_message(
+        message.chat.id, 
+        "👋 Привет! Выбери страховую компанию на клавиатуре внизу:", 
+        reply_markup=markup
+    )
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('set_'))
-def callback_set_insurer(call):
-    insurer_key = call.data.replace('set_', '')
-    user_choices[call.from_user.id] = insurer_key
-    insurer_name = "АльфаСтрахование" if insurer_key == "alfa" else "Ингосстрах"
-    bot.answer_callback_query(call.id)
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text=f"✅ Выбрано: *{insurer_name}*.\n\nТеперь пришли мне JSON с данными для полиса.", parse_mode='Markdown')
+# Обработчик нажатия на кнопки клавиатуры
+@bot.message_handler(func=lambda message: message.text in ["🔴 АльфаСтрахование", "🔵 Ингосстрах"])
+def handle_company_choice(message):
+    if "Альфа" in message.text:
+        user_choices[message.from_user.id] = "alfa"
+        bot.reply_to(message, "✅ Выбрано: *АльфаСтрахование*.\n\nТеперь пришли мне JSON с данными.", parse_mode='Markdown')
+    else:
+        user_choices[message.from_user.id] = "ingo"
+        bot.reply_to(message, "✅ Выбрано: *Ингосстрах*.\n\nТеперь пришли мне JSON с данными.", parse_mode='Markdown')
 
+# Обработчик текста (JSON)
 @bot.message_handler(content_types=['text'])
 def handle_json(message):
+    # Если это текст от кнопки, пропускаем (его уже обработал предыдущий handler)
+    if message.text in ["🔴 АльфаСтрахование", "🔵 Ингосстрах"]:
+        return
+        
     insurer_key = user_choices.get(message.from_user.id, "alfa")
     insurer_name = "АльфаСтрахование" if insurer_key == "alfa" else "Ингосстрах"
     raw_text = message.text.strip().replace("```json", "").replace("```", "").strip()
+    
     if not raw_text.startswith("{"):
         bot.reply_to(message, f"Ты выбрал: {insurer_name}. Отправь JSON с данными.")
         return
+        
     try: data = json.loads(raw_text)
     except json.JSONDecodeError:
         bot.reply_to(message, "❌ Ошибка: это не похоже на JSON.")
