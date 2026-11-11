@@ -12,7 +12,6 @@ if not BOT_TOKEN:
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 
-# Хранилище выбора пользователей
 user_choices = {}
 
 def load_font(paths):
@@ -360,7 +359,7 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (С УМНЫМ ПОИСКОМ КЛЕТОК VIN)
+# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (С ИДЕАЛЬНЫМ ПОИСКОМ КЛЕТОК VIN)
 # =========================================================================
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87], "bold", 10),
@@ -404,7 +403,8 @@ def ingos_vin_cells(page):
     try:
         for d in page.get_drawings():
             r = d["rect"]
-            if 316 < r.y0 < 340 and 318 < r.y1 < 344 and 9 < r.width < 20 and 8 < r.height < 25:
+            # Ищем клетки в зоне VIN (примерно y=316-340, x=318-440)
+            if 316 < r.y0 < 340 and 318 < r.y1 < 344 and 8 < r.width < 25 and 8 < r.height < 25:
                 cells.append(pymupdf.Rect(r))
     except Exception:
         pass
@@ -412,7 +412,7 @@ def ingos_vin_cells(page):
     if cells:
         chain = [cells[0]]
         for r in cells[1:]:
-            if r.x0 - chain[-1].x0 < 30:
+            if r.x0 - chain[-1].x0 < 30: # Фильтруем лишние прямоугольники
                 chain.append(r)
         cells = chain
     return cells
@@ -450,7 +450,7 @@ def fill_ingos_pdf(data):
     else:
         data["policy_number_str"] = "ХХХ 0604558947"
 
-    # VIN забираем ОТДЕЛЬНО (в общий цикл не пускаем!)
+    # VIN забираем ОТДЕЛЬНО, очищаем от пробелов
     vin_val = "".join(str(data.get("vin", "")).split()).upper()
     data.pop("vin", None)
 
@@ -513,32 +513,43 @@ def fill_ingos_pdf(data):
             vspans = collect_spans(page, VIN_RECT)
             for sp in vspans:
                 to_delete.append(sp["bbox"])
-            vbase = vspans[0]["origin"][1] if vspans and "origin" in vspans[0] else 332.6
-
+            
             cells = ingos_vin_cells(page)
-            if len(cells) >= len(vin_val):
-                centers = [(c.x0 + c.x1) / 2 for c in cells]
+            
+            if len(cells) >= 17:
+                # Если нашли нарисованные клетки, ставим букву ровно в центр каждой
+                for i, ch in enumerate(vin_val):
+                    cell = cells[i]
+                    w = FONT_BLD_OBJ.text_length(ch, fontsize=11)
+                    x = cell.x0 + (cell.width - w) / 2
+                    y = cell.y1 - 3.5  # Базовая линия чуть выше низа клетки
+                    vin_inserts.append((x, y, ch))
             else:
+                # Запасной вариант: делим ширину старого текста на 17 частей
                 boxes = []
                 for sp in vspans:
-                    t = sp["text"].strip()
+                    t = sp["text"]
                     x0, y0, x1, y1 = sp["bbox"]
-                    if len(t) == 1: boxes.append((x0, x1))
-                    else:
-                        w = (x1 - x0) / len(t)
-                        for i in range(len(t)): boxes.append((x0 + i*w, x0 + (i+1)*w))
+                    w = (x1 - x0) / len(t)
+                    for i, ch in enumerate(t):
+                        if ch.isalnum():
+                            boxes.append((x0 + i*w, x0 + (i+1)*w))
                 boxes.sort()
-                if boxes:
+                
+                if len(boxes) >= 17:
                     c0 = (boxes[0][0] + boxes[0][1]) / 2
                     cN = (boxes[-1][0] + boxes[-1][1]) / 2
-                    p = (cN - c0) / max(1, len(boxes) - 1)
-                    centers = [c0 + i * p for i in range(len(vin_val))]
+                    p = (cN - c0) / 16
+                    centers = [c0 + i * p for i in range(17)]
                 else:
-                    centers = [198.5 + i * 14.3 for i in range(len(vin_val))]
+                    c0 = 198.4
+                    p = 14.05
+                    centers = [c0 + i * p for i in range(17)]
 
-            for i, ch in enumerate(vin_val):
-                w = FONT_BLD_OBJ.text_length(ch, fontsize=10)
-                vin_inserts.append((centers[i] - w / 2, vbase, ch))
+                for i, ch in enumerate(vin_val):
+                    if i < len(centers):
+                        w = FONT_BLD_OBJ.text_length(ch, fontsize=11)
+                        vin_inserts.append((centers[i] - w / 2, 332.5, ch))
 
         # ---------- остальные поля ----------
         for (rect, val, fkey, size, key) in items:
@@ -556,9 +567,9 @@ def fill_ingos_pdf(data):
         page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
-        # сначала VIN по клеточкам
+        # Сначала вставляем VIN по одной букве
         for x, b, ch in vin_inserts:
-            page.insert_text((x, b), ch, fontname="tnewb", fontsize=10, color=(0,0,0))
+            page.insert_text((x, b), ch, fontname="tnewb", fontsize=11, color=(0,0,0))
 
         for item in inserts:
             r, val, fkey, size, is_center, _ = item
