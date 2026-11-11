@@ -33,7 +33,7 @@ FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 # =========================================================================
 # ТВОЙ ИДЕАЛЬНЫЙ КОД АЛЬФЫ (НЕ ТРОНУТ НИ ОДИН СИМВОЛ)
 # =========================================================================
-FIELDS = {
+FIELDS_ALFA = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
     "owner_fio":               (1, [16.0, 348.83, 230.86, 361.01], "reg",  11),
     "marka":                   (1, [14.0, 402.65, 184.0, 414.83], "reg",  11),
@@ -69,7 +69,7 @@ FIELDS = {
     "premium_total":           (1, [499.0, 703.77, 559.0, 711.52],   "reg",  7),
 }
 
-CENTER_FIELDS = {
+CENTER_FIELDS_ALFA = {
     "marka", "model",
     "premium_thousands", "premium_hundreds", "premium_kop",
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
@@ -116,7 +116,6 @@ def collect_spans(page, area):
 
 def fill_alfa_pdf(data):
     doc = pymupdf.open("template.pdf")
-    
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
@@ -147,7 +146,7 @@ def fill_alfa_pdf(data):
     data["premium_in_words"] = f"{total_rub} рублей {total_kop} копеек. Дата оформления:"
 
     by_page = {}
-    for key, (pno, rect, fkey, size) in FIELDS.items():
+    for key, (pno, rect, fkey, size) in FIELDS_ALFA.items():
         if key not in data: continue
         val = str(data[key]).strip()
         
@@ -187,7 +186,7 @@ def fill_alfa_pdf(data):
                     inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char"))
             else:
                 r = pymupdf.Rect(rect)
-                is_center = key in CENTER_FIELDS
+                is_center = key in CENTER_FIELDS_ALFA
                 inserts.append((r, val, fkey, size, is_center, "box"))
 
         if to_delete:
@@ -224,7 +223,6 @@ def fill_alfa_pdf(data):
 
 def fill_alfa_limited_pdf(data):
     doc = pymupdf.open("template.pdf")
-    
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
@@ -254,7 +252,7 @@ def fill_alfa_limited_pdf(data):
 
     data["premium_in_words"] = f"{total_rub} рублей {total_kop} копеек. Дата оформления:"
 
-    all_fields = dict(FIELDS)
+    all_fields = dict(FIELDS_ALFA)
     
     all_fields["limited_checkbox"] = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
     all_fields["unlimited_checkbox"] = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
@@ -324,7 +322,7 @@ def fill_alfa_limited_pdf(data):
                     x0, y0, x1, y1 = char_boxes[i]
                     inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char"))
             else:
-                is_center = True if key.startswith("driver") else (key in CENTER_FIELDS)
+                is_center = True if key.startswith("driver") else (key in CENTER_FIELDS_ALFA)
                 if key.startswith("driver"):
                     r = pymupdf.Rect(r.x0, r.y0 + DRIVER_DY, r.x1, r.y1 + DRIVER_DY)
                 inserts.append((r, val, fkey, size, is_center, "box"))
@@ -362,24 +360,30 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# КОД ДЛЯ ИНГОССТРАХА (Отдельно, чтобы не мешать Альфе)
+# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (на основе свежего скана)
 # =========================================================================
 FIELDS_INGOS = {
-    "policyholder_fio":        (1, [30.69, 251.8, 500.0, 263.87], "bold", 10),
-    "owner_fio":               (1, [28.35, 274.03, 500.0, 286.1], "bold", 10),
-    "marka":                   (1, [70.11, 322.47, 160.0, 334.54], "bold", 10),
-    "model":                   (1, [92.21, 334.54, 160.0, 346.61], "bold", 10),
-    "vin":                     (1, [185.0, 322.9, 440.0, 335.02], "bold", 10),
+    "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87], "bold", 10),
+    "owner_fio":               (1, [25.0, 274.03, 500.0, 286.1], "bold", 10),
+    "marka":                   (1, [50.0, 322.47, 160.0, 334.54], "bold", 10),
+    "model":                   (1, [50.0, 334.54, 160.0, 346.61], "bold", 10),
+    "vin":                     (1, [190.0, 322.9, 440.0, 335.02], "bold", 10),
     "gosnomer":                (1, [477.95, 331.73, 560.0, 343.8], "bold", 10),
-    "premium_str":             (1, [470.0, 40.07, 570.0, 52.14], "bold", 10),
+    
+    "premium_str":             (1, [470.0, 40.07, 573.43, 52.14], "bold", 10),
     "policy_number_str":       (1, [273.3, 99.02, 440.0, 115.91], "bold", 14),
-    "date_end_top":            (1, [506.14, 162.21, 570.0, 171.87], "bold", 8),
-    "date_period_str":         (1, [36.55, 223.93, 195.0, 236.0], "bold", 10),
-    "pts_doc_line":            (1, [28.35, 363.31, 400.0, 372.96], "reg", 8),
-    "date_issue1":             (1, [26.65, 789.27, 300.0, 798.92], "reg", 8),
+    
+    "date_start_top":          (1, [506.14, 162.21, 560.72, 171.87], "bold", 8),
+    "date_end_top":            (1, [506.14, 177.57, 560.72, 187.22], "bold", 8),
+    
+    "date_period_str":         (1, [28.35, 223.93, 194.52, 236.0], "bold", 10),
+    "pts_doc_line":            (1, [28.35, 363.31, 300.0, 372.96], "reg", 8),
+    
     "unlimited_checkbox":      (1, [21.25, 420.22, 359.27, 429.87], "reg", 8),
-    "limited_checkbox":        (1, [21.25, 429.87, 246.63, 439.52], "reg", 8),
+    "limited_checkbox":        (1, [21.25, 429.87, 300.0, 439.52], "reg", 8),
     "trailer_checkbox":        (1, [250.59, 289.5, 300.92, 299.15], "reg", 8),
+    "date_issue1":             (1, [26.65, 789.27, 300.0, 798.92], "reg", 8),
+    
     "tb":                      (1, [60.0, 667.2, 90.0, 678.07], "reg", 9),
     "kt":                      (1, [140.0, 667.2, 170.0, 678.07], "reg", 9),
     "kbm":                     (1, [190.0, 667.2, 220.0, 678.07], "reg", 9),
@@ -389,6 +393,9 @@ FIELDS_INGOS = {
     "kp":                      (1, [400.0, 667.2, 430.0, 678.07], "reg", 9),
     "km":                      (1, [450.0, 667.2, 480.0, 678.07], "reg", 9),
     "premium_total":           (1, [510.0, 667.2, 570.0, 678.07], "reg", 9),
+}
+CENTER_FIELDS_INGOS = {
+    "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"
 }
 
 def fill_ingos_pdf(data):
@@ -415,19 +422,20 @@ def fill_ingos_pdf(data):
     month_name = months[today.month - 1]
     
     data["premium_str"] = f"{total_rub} руб. {total_kop} коп."
-    data["policy_number_str"] = f"№ {data.get('policy_series', '')} {data.get('policy_number', '')}"
+    data["policy_number_str"] = f"№  {data.get('policy_series', '')} {data.get('policy_number', '')}"
+    data["date_start_top"] = f"{today.strftime('%d.%m.%Y')} г."
     data["date_end_top"] = f"{end_date.strftime('%d.%m.%Y')} г."
-    data["date_period_str"] = f"{today.strftime('%d.%m.%Y')} г. по {end_date.strftime('%d.%m.%Y')} г."
-    data["pts_doc_line"] = f"Вид документа СВИДЕТЕЛЬСТВО О РЕГИСТРАЦИИ серия {data.get('pts_series', '')} номер {data.get('pts_number', '')}"
+    data["date_period_str"] = f"с {today.strftime('%d.%m.%Y')} г. по {end_date.strftime('%d.%m.%Y')} г."
+    data["pts_doc_line"] = f"Вид документа ПАСПОРТ ТС серия {data.get('pts_series', '')} номер {data.get('pts_number', '')}"
     data["date_issue1"] = f"Дата выдачи полиса «{today.day}» {month_name} {today.year} г."
     
-    drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
+    drivers = data.get("drivers", [])
     if drivers:
-        data["unlimited_checkbox"] = "[ ] неограниченного количества лиц..."
-        data["limited_checkbox"] = "[V] лиц, допущенных к управлению..."
+        data["unlimited_checkbox"] = "[ ] неограниченного количества лиц, допущенных к управлению транспортным средством"
+        data["limited_checkbox"] = "[V] лиц, допущенных к управлению транспортным средством"
     else:
-        data["unlimited_checkbox"] = "[V] неограниченного количества лиц..."
-        data["limited_checkbox"] = "[ ] лиц, допущенных к управлению..."
+        data["unlimited_checkbox"] = "[V] неограниченного количества лиц, допущенных к управлению транспортным средством"
+        data["limited_checkbox"] = "[ ] лиц, допущенных к управлению транспортным средством"
         
     if data.get("trailer", "").lower() == "нет":
         data["trailer_checkbox"] = "[] да, [X] нет."
@@ -443,6 +451,19 @@ def fill_ingos_pdf(data):
 
     all_fields = dict(FIELDS_INGOS)
     
+    # Водители (если есть)
+    driver_rows = [(483.44, 495.51), (496.01, 508.08), (508.58, 520.65), (521.15, 533.22), (533.72, 545.79)]
+    if drivers:
+        for i, d in enumerate(drivers[:5]):
+            y0, y1 = driver_rows[i]
+            all_fields[f"driver{i+1}_fio"] = (1, [60.0, y0, 425.0, y1], "reg", 10)
+            all_fields[f"driver{i+1}_license"] = (1, [430.0, y0, 520.0, y1], "reg", 10)
+            all_fields[f"driver{i+1}_kbm"] = (1, [525.0, y0, 560.0, y1], "reg", 10)
+            data[f"driver{i+1}_fio"] = d.get("fio", "")
+            data[f"driver{i+1}_license"] = d.get("license", "")
+            try: data[f"driver{i+1}_kbm"] = f"{float(d.get('kbm', '1.00')):.2f}"
+            except: data[f"driver{i+1}_kbm"] = "1.00"
+
     by_page = {}
     for key, (pno, rect, fkey, size) in all_fields.items():
         if key not in data: continue
@@ -464,7 +485,7 @@ def fill_ingos_pdf(data):
             if spans:
                 for sp in spans: to_delete.append(sp["bbox"])
             
-            is_center = (key in CENTER_FIELDS) or key == "premium_total"
+            is_center = (key in CENTER_FIELDS_INGOS) or key.startswith("driver")
             inserts.append((r, val, fkey, size, is_center, "box"))
 
         if to_delete:
