@@ -69,64 +69,55 @@ FIELDS_ALFA = {
 }
 
 # =========================================================================
-# ПРОФИЛЬ 2: ИНГОССТРАХ (новые координаты)
+# ПРОФИЛЬ 2: ИНГОССТРАХ (Точные координаты по скану)
 # =========================================================================
 FIELDS_INGOS = {
-    "policyholder_fio":        (1, [25.0, 251.8, 300.0, 263.87], "bold", 10),
-    "owner_fio":               (1, [25.0, 274.03, 300.0, 286.1], "bold", 10),
-    "marka":                   (1, [65.0, 322.47, 150.0, 334.54], "bold", 10),
-    "model":                   (1, [85.0, 334.54, 150.0, 346.61], "bold", 10),
-    "vin":                     (1, [180.0, 322.47, 400.0, 334.54], "bold", 10), # Широкая рамка для VIN
-    "gosnomer":                (1, [430.0, 322.47, 550.0, 334.54], "bold", 10),
+    "policyholder_fio":        (1, [30.69, 251.8, 400.0, 263.87], "bold", 10),
+    "owner_fio":               (1, [28.35, 274.03, 400.0, 286.1], "bold", 10),
+    "marka":                   (1, [70.11, 322.47, 160.0, 334.54], "bold", 10),
+    "model":                   (1, [92.21, 334.54, 160.0, 346.61], "bold", 10),
+    "vin":                     (1, [185.0, 322.9, 440.0, 335.02], "bold", 10),
+    "gosnomer":                (1, [477.95, 331.73, 560.0, 343.8], "bold", 10),
     
-    "pts_series":              (1, [245.0, 363.31, 275.0, 372.96], "reg", 8),
-    "pts_number":              (1, [295.0, 363.31, 330.0, 372.96], "reg", 8),
+    "premium_rub":             (1, [470.0, 40.07, 505.0, 52.14], "bold", 10),
+    "premium_kop_str":         (1, [505.0, 40.07, 570.0, 52.14], "bold", 10),
     
-    "premium_thousands":       (1, [440.0, 80.0, 490.0, 95.0], "bold", 12),
-    "premium_hundreds":        (1, [490.0, 80.0, 510.0, 95.0], "bold", 12), 
-    "premium_kop":             (1, [515.0, 80.0, 535.0, 95.0], "bold", 12),
+    "policy_number_line":      (1, [273.3, 99.02, 440.0, 115.91], "bold", 14),
     
-    "policy_series":           (1, [80.0, 130.0, 150.0, 145.0], "bold", 12), 
-    "policy_number":           (1, [160.0, 130.0, 300.0, 145.0], "bold", 12),
+    "date_start_top":          (1, [490.0, 162.21, 570.0, 171.87], "bold", 8),
+    "date_end_top":            (1, [490.0, 177.57, 570.0, 187.22], "bold", 8),
     
-    "date_start":              (1, [30.0, 195.0, 200.0, 210.0], "reg", 9), 
-    "date_end":                (1, [200.0, 195.0, 400.0, 210.0], "reg", 9),
-    "date_period_start":       (1, [30.0, 215.0, 200.0, 230.0], "reg", 9),
-    "date_period_end":         (1, [200.0, 215.0, 400.0, 230.0], "reg", 9),
+    "date_period_start_str":   (1, [30.0, 223.93, 123.27, 236.0], "bold", 10),
+    "date_period_end_str":     (1, [123.28, 223.93, 200.0, 236.0], "bold", 10),
     
-    "date_issue1":             (1, [30.0, 750.0, 100.0, 760.0], "reg", 8),
-    "date_issue2":             (1, [100.0, 750.0, 200.0, 760.0], "reg", 8),
-    "premium_in_words":        (1, [20.0, 620.0, 500.0, 630.0], "reg", 8), # Оценка
+    "pts_doc_line":            (1, [28.35, 363.31, 350.0, 372.96], "reg", 8),
+    "date_issue1":             (1, [26.65, 789.27, 300.0, 798.92], "reg", 8),
+    
+    "unlimited_checkbox":      (1, [21.25, 420.22, 359.27, 429.87], "reg", 8),
+    "limited_checkbox":        (1, [21.25, 429.87, 246.63, 439.52], "reg", 8),
+    "trailer_checkbox":        (1, [250.59, 289.5, 300.92, 299.15], "reg", 8),
     
     "tb":                      (1, [60.0, 667.2, 90.0, 678.07], "reg", 9),
-    "kt":                      (1, [130.0, 667.2, 160.0, 678.07], "reg", 9),
+    "kt":                      (1, [140.0, 667.2, 170.0, 678.07], "reg", 9),
     "kbm":                     (1, [190.0, 667.2, 220.0, 678.07], "reg", 9),
-    "kvs":                     (1, [250.0, 667.2, 280.0, 678.07], "reg", 9),
-    "ko":                      (1, [310.0, 667.2, 340.0, 678.07], "reg", 9),
-    "ks":                      (1, [370.0, 667.2, 400.0, 678.07], "reg", 9),
-    "kp":                      (1, [430.0, 667.2, 460.0, 678.07], "reg", 9),
-    "km":                      (1, [490.0, 667.2, 520.0, 678.07], "reg", 9),
-    "premium_total":           (1, [520.0, 667.2, 580.0, 678.07], "reg", 9),
+    "kvs":                     (1, [240.0, 667.2, 270.0, 678.07], "reg", 9),
+    "ko":                      (1, [295.0, 667.2, 325.0, 678.07], "reg", 9),
+    "ks":                      (1, [350.0, 667.2, 380.0, 678.07], "reg", 9),
+    "kp":                      (1, [400.0, 667.2, 430.0, 678.07], "reg", 9),
+    "km":                      (1, [450.0, 667.2, 480.0, 678.07], "reg", 9),
+    "premium_total":           (1, [510.0, 667.2, 570.0, 678.07], "reg", 9),
 }
 
-# Заготовки для остальных
-FIELDS_RESO = FIELDS_ALFA.copy()
-FIELDS_VSK = FIELDS_ALFA.copy()
-FIELDS_SOGLASIE = FIELDS_ALFA.copy()
-
 TEMPLATE_PROFILES = {
-    "alfa":     {"name": "АльфаСтрахование", "file": "template.pdf", "fields": FIELDS_ALFA},
-    "ingo":     {"name": "Ингосстрах", "file": "template_ingos.pdf", "fields": FIELDS_INGOS},
-    "reso":     {"name": "РЕСО-Гарантия", "file": "template_reso.pdf", "fields": FIELDS_RESO},
-    "soglasie": {"name": "Согласие", "file": "template_soglasie.pdf", "fields": FIELDS_SOGLASIE},
-    "vsk":      {"name": "ВСК", "file": "template_vsk.pdf", "fields": FIELDS_VSK},
+    "alfa": {"name": "АльфаСтрахование", "file": "template.pdf", "fields": FIELDS_ALFA},
+    "ingo": {"name": "Ингосстрах", "file": "template_ingos.pdf", "fields": FIELDS_INGOS},
 }
 
 CENTER_FIELDS = {
     "premium_thousands", "premium_hundreds", "premium_kop",
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km",
     "trailer_new_x", "policy_series", "policy_number",
-    "premium_total"
+    "premium_total", "date_start_top", "date_end_top"
 }
 DECIMAL_FIELDS = ["kt", "kbm", "kvs", "ko", "ks", "kp", "km"]
 
@@ -158,57 +149,108 @@ def fill_pdf_to_memory(data, profile):
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
     end_date = next_year - datetime.timedelta(days=1)
     
-    data["date_start"] = today.strftime("%d.%m.%Y")
-    data["date_end"] = end_date.strftime("%d.%m.%Y")
-    data["date_period_start"] = data["date_start"]
-    data["date_period_end"] = data["date_end"]
-    data["date_issue1"] = data["date_start"]
-    data["date_issue2"] = data["date_start"]
-    data["date_design_1"] = today.strftime("%d.%m.")
-    data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
-
     total_rub = str(data.get("premium_total_thousands", "")).strip()
     if not total_rub:
         total_rub = str(data.get("premium_thousands", "")).strip() + str(data.get("premium_hundreds", "")).strip()
     total_kop = str(data.get("premium_total_kop", "")).strip()
     if not total_kop:
         total_kop = str(data.get("premium_kop", "")).strip()
-    
+        
     if total_rub and total_kop:
         if len(total_kop) == 1: total_kop = "0" + total_kop
-        data["premium_total"] = f"{total_rub}.{total_kop}"
+        formatted_total = f"{total_rub}.{total_kop}"
     else:
-        data["premium_total"] = total_rub
+        formatted_total = total_rub
+        
+    data["premium_total"] = formatted_total
 
-    data["premium_in_words"] = f"{total_rub} рублей {total_kop} копеек. Дата оформления:"
+    # Логика для Ингосстраха
+    if profile["name"] == "Ингосстрах":
+        months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+        month_name = months[today.month - 1]
+        
+        data["date_start_top"] = f"{today.strftime('%d.%m.%Y')} г."
+        data["date_end_top"] = f"{end_date.strftime('%d.%m.%Y')} г."
+        data["date_period_start_str"] = f"{today.strftime('%d.%m.%Y')} г. по"
+        data["date_period_end_str"] = f"{end_date.strftime('%d.%m.%Y')} г."
+        data["date_issue1"] = f"Дата выдачи полиса «{today.day}» {month_name} {today.year} г."
+        
+        data["pts_doc_line"] = f"Вид документа СВИДЕТЕЛЬСТВО О РЕГИСТРАЦИИ серия {data.get('pts_series', '')} номер {data.get('pts_number', '')}"
+        data["policy_number_line"] = f"№ {data.get('policy_series', '')} {data.get('policy_number', '')}"
+        
+        data["premium_rub"] = f"{data.get('premium_thousands', '')}{data.get('premium_hundreds', '')}"
+        data["premium_kop_str"] = f"руб. {data.get('premium_kop', '')} коп."
+        
+        try:
+            tot_r = int(float(formatted_total))
+            tot_k = int(round((float(formatted_total) - tot_r) * 100))
+            data["premium_total"] = f"{tot_r:,}".replace(',', ' ') + f",{tot_k:02d}"
+        except: pass
+            
+        drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
+        if drivers:
+            data["unlimited_checkbox"] = "[ ] неограниченного количества лиц, допущенных к управлению транспортным средством"
+            data["limited_checkbox"] = "[V] лиц, допущенных к управлению транспортным средством"
+        else:
+            data["unlimited_checkbox"] = "[V] неограниченного количества лиц, допущенных к управлению транспортным средством"
+            data["limited_checkbox"] = "[ ] лиц, допущенных к управлению транспортным средством"
+            
+        if data.get("trailer", "").lower() == "нет":
+            data["trailer_checkbox"] = "[] да, [X] нет."
+        else:
+            data["trailer_checkbox"] = "[X] да, [] нет."
+
+    else: # Логика для Альфы
+        data["date_start"] = today.strftime("%d.%m.%Y")
+        data["date_end"] = end_date.strftime("%d.%m.%Y")
+        data["date_period_start"] = data["date_start"]
+        data["date_period_end"] = data["date_end"]
+        data["date_issue1"] = data["date_start"]
+        data["date_issue2"] = data["date_start"]
+        data["date_design_1"] = today.strftime("%d.%m.")
+        data["date_design_2"] = today.strftime("%Y 00:00:00 UTC+03:00.")
+        data["premium_in_words"] = f"{total_rub} рублей {total_kop} копеек. Дата оформления:"
 
     all_fields = dict(fields_map)
     
     drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
     if drivers:
-        # Пока используем координаты Альфы для водителей, если они есть
-        all_fields["limited_checkbox"] = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
-        all_fields["unlimited_checkbox"] = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
-        data["limited_checkbox"] = "X"
-        data["unlimited_checkbox"] = ""
-        
-        driver_fields = [
-            (1, [30.0, 555.9, 340.0, 563.65], "driver1_fio", "reg", 7),
-            (1, [360.0, 555.75, 425.0, 563.5], "driver1_license", "reg", 7),
-            (1, [500.0, 555.9, 540.0, 563.65], "driver1_kbm", "reg", 7),
-            (1, [30.0, 567.27, 340.0, 575.02], "driver2_fio", "reg", 7),
-            (1, [360.0, 567.27, 425.0, 575.02], "driver2_license", "reg", 7),
-            (1, [500.0, 567.27, 540.0, 575.02], "driver2_kbm", "reg", 7),
-            (1, [30.0, 577.27, 340.0, 585.02], "driver3_fio", "reg", 7),
-            (1, [360.0, 577.27, 425.0, 585.02], "driver3_license", "reg", 7),
-            (1, [500.0, 577.27, 540.0, 585.02], "driver3_kbm", "reg", 7),
-        ]
+        if profile["name"] == "Ингосстрах":
+            driver_fields = [
+                (1, [30.0, 483.44, 40.0, 495.51], "driver1_num", "reg", 10),
+                (1, [60.0, 483.44, 430.0, 495.51], "driver1_fio", "reg", 10),
+                (1, [430.0, 483.44, 520.0, 495.51], "driver1_license", "reg", 10),
+                (1, [520.0, 483.44, 560.0, 495.51], "driver1_kbm", "reg", 10),
+                (1, [30.0, 496.01, 40.0, 508.08], "driver2_num", "reg", 10),
+                (1, [60.0, 496.01, 430.0, 508.08], "driver2_fio", "reg", 10),
+                (1, [430.0, 496.01, 520.0, 508.08], "driver2_license", "reg", 10),
+                (1, [520.0, 496.01, 560.0, 508.08], "driver2_kbm", "reg", 10),
+                (1, [30.0, 508.58, 40.0, 520.65], "driver3_num", "reg", 10),
+                (1, [60.0, 508.58, 430.0, 520.65], "driver3_fio", "reg", 10),
+                (1, [430.0, 508.58, 520.0, 520.65], "driver3_license", "reg", 10),
+                (1, [520.0, 508.58, 560.0, 520.65], "driver3_kbm", "reg", 10),
+            ]
+        else:
+            driver_fields = [
+                (1, [30.0, 555.9, 340.0, 563.65], "driver1_fio", "reg", 7),
+                (1, [360.0, 555.75, 425.0, 563.5], "driver1_license", "reg", 7),
+                (1, [500.0, 555.9, 540.0, 563.65], "driver1_kbm", "reg", 7),
+                (1, [30.0, 567.27, 340.0, 575.02], "driver2_fio", "reg", 7),
+                (1, [360.0, 567.27, 425.0, 575.02], "driver2_license", "reg", 7),
+                (1, [500.0, 567.27, 540.0, 575.02], "driver2_kbm", "reg", 7),
+                (1, [30.0, 577.27, 340.0, 585.02], "driver3_fio", "reg", 7),
+                (1, [360.0, 577.27, 425.0, 585.02], "driver3_license", "reg", 7),
+                (1, [500.0, 577.27, 540.0, 585.02], "driver3_kbm", "reg", 7),
+            ]
+            
         for i, d in enumerate(drivers[:3]):
             idx = i + 1
+            data[f"driver{idx}_num"] = str(idx)
             data[f"driver{idx}_fio"] = d.get("fio", "")
             data[f"driver{idx}_license"] = d.get("license", "")
             try: data[f"driver{idx}_kbm"] = f"{float(d.get('kbm', '1.00')):.2f}"
             except: data[f"driver{idx}_kbm"] = "1.00"
+            
         for df in driver_fields:
             all_fields[df[2]] = (df[0], df[1], df[3], df[4])
 
@@ -231,11 +273,12 @@ def fill_pdf_to_memory(data, profile):
             r = pymupdf.Rect(rect)
             spans = collect_spans(page, r)
             
-            if key in ["trailer_old_x", "unlimited_checkbox", "limited_checkbox"]:
+            if key in ["trailer_old_x", "unlimited_checkbox", "limited_checkbox", "trailer_checkbox"]:
                 if spans:
                     for sp in spans: to_delete.append(sp["bbox"])
+                is_center = False if profile["name"] == "Ингосстрах" else True
                 if val: 
-                    inserts.append((r, val, fkey, size, True, "box"))
+                    inserts.append((r, val, fkey, size, is_center, "box"))
                 continue
 
             if spans:
@@ -297,14 +340,9 @@ def fill_pdf_to_memory(data, profile):
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     markup = types.InlineKeyboardMarkup(row_width=2)
-    
     btn_alfa = types.InlineKeyboardButton("🔵 АльфаСтрахование", callback_data="set_alfa")
     btn_ingo = types.InlineKeyboardButton("🟢 Ингосстрах", callback_data="set_ingo")
-    btn_reso = types.InlineKeyboardButton("🟡 РЕСО-Гарантия", callback_data="set_reso")
-    btn_soglasie = types.InlineKeyboardButton("🟠 Согласие", callback_data="set_soglasie")
-    btn_vsk = types.InlineKeyboardButton("🟣 ВСК", callback_data="set_vsk")
-    
-    markup.add(btn_alfa, btn_ingo, btn_reso, btn_soglasie, btn_vsk)
+    markup.add(btn_alfa, btn_ingo)
     
     bot.send_message(
         message.chat.id, 
@@ -341,13 +379,6 @@ def handle_json(message):
     except json.JSONDecodeError:
         bot.reply_to(message, "❌ Ошибка: это не похоже на JSON.")
         return
-
-    if data.get("trailer", "").lower() == "нет":
-        data["trailer_old_x"] = ""
-        data["trailer_new_x"] = "Х"
-    else:
-        data["trailer_old_x"] = "Х"
-        data["trailer_new_x"] = ""
 
     drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
     
