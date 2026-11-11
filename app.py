@@ -365,10 +365,10 @@ def fill_alfa_limited_pdf(data):
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87], "bold", 10),
     "owner_fio":               (1, [25.0, 274.03, 500.0, 286.1], "bold", 10),
-    "marka":                   (1, [50.0, 322.47, 160.0, 334.54], "bold", 10),
-    "model":                   (1, [50.0, 334.54, 160.0, 346.61], "bold", 10),
-    "vin":                     (1, [191.0, 322.9, 440.0, 335.02], "bold", 10),
-    "gosnomer":                (1, [477.95, 331.73, 560.0, 343.8], "bold", 10),
+    "marka":                   (1, [70.0, 322.47, 150.0, 334.54], "bold", 10), # Сужено для центрирования
+    "model":                   (1, [85.0, 334.54, 130.0, 346.61], "bold", 10), # Сужено для центрирования
+    "vin":                     (1, [191.0, 322.9, 432.0, 335.02], "bold", 10), # Координаты для центрирования
+    "gosnomer":                (1, [470.0, 331.73, 545.0, 343.8], "bold", 10), # Сужено для центрирования
     
     "premium_str":             (1, [470.0, 40.07, 573.43, 52.14], "bold", 10),
     "policy_number_str":       (1, [299.0, 99.02, 450.0, 115.91], "bold", 14),
@@ -396,7 +396,7 @@ FIELDS_INGOS = {
 }
 
 CENTER_FIELDS_INGOS = {
-    "marka", "model", "gosnomer", # <--- ДОБАВЛЕНО ЦЕНТРИРОВАНИЕ
+    "marka", "model", "gosnomer", "vin", # <--- ДОБАВЛЕНЫ ДЛЯ ЦЕНТРИРОВАНИЯ
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"
 }
 
@@ -425,15 +425,15 @@ def fill_ingos_pdf(data):
     
     data["premium_str"] = f"{total_rub} руб. {total_kop} коп."
     
-    # ФИКС НОМЕРА ПОЛИСА: если пусто, не трогаем
+    # ФИКС НОМЕРА ПОЛИСА (убрали "№", так как он уже есть в шаблоне)
     series = str(data.get('policy_series', '')).strip()
     number = str(data.get('policy_number', '')).strip()
     if series or number:
-        data["policy_number_str"] = f"№  {series} {number}".strip()
+        data["policy_number_str"] = f"{series} {number}".strip()
     else:
-        data["policy_number_str"] = "№  ХХХ 0604558947" # Оставляем как в шаблоне
+        data["policy_number_str"] = "ХХХ 0604558947" # Оставляем как в шаблоне
 
-    # ФИКС ВИН: добавляем пробелы, чтобы не слипалось
+    # ФИКС ВИН: добавляем пробелы
     vin_val = str(data.get("vin", "")).strip()
     if vin_val:
         data["vin"] = " ".join(list(vin_val))
