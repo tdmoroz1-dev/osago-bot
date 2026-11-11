@@ -359,17 +359,20 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (С ЦВЕТОМ И ЦЕНТРОВКОЙ)
+# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (С ТОЧНЫМ ЦВЕТОМ ИЗ ШАБЛОНА)
 # =========================================================================
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87], "bold", 10),
     "owner_fio":               (1, [25.0, 274.03, 500.0, 286.1], "bold", 10),
     "marka":                   (1, [50.0, 322.47, 160.0, 334.54], "bold", 10),
     "model":                   (1, [50.0, 334.54, 160.0, 346.61], "bold", 10),
-    "gosnomer":                (1, [450.0, 331.73, 570.0, 343.8], "bold", 10), # Расширили рамку для центровки
     
-    "premium_str":             (1, [450.0, 40.07, 580.0, 52.14], "bold", 10),  # Расширили для центровки
-    "policy_number_str":       (1, [250.0, 99.02, 450.0, 115.91], "bold", 14), # Расширили для центровки
+    # Госномер сдвинут левее (центр надписи)
+    "gosnomer":                (1, [465.0, 331.73, 555.0, 343.8], "bold", 10),
+    
+    # Широкие рамки для центрирования синих надписей
+    "premium_str":             (1, [450.0, 40.07, 580.0, 52.14], "bold", 10),
+    "policy_number_str":       (1, [250.0, 99.02, 450.0, 115.91], "bold", 14),
     
     "date_start_top":          (1, [506.14, 162.21, 560.72, 171.87], "bold", 8),
     "date_end_top":            (1, [506.14, 177.57, 560.72, 187.22], "bold", 8),
@@ -397,6 +400,20 @@ CENTER_FIELDS_INGOS = {
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"
 }
 
+def get_ingos_blue(page):
+    """Извлекает точный цвет надписи 'ЭЛЕКТРОННЫЙ' из шаблона."""
+    for block in page.get_text("dict").get("blocks", []):
+        if block.get("type") != 0: continue
+        for line in block.get("lines", []):
+            for span in line.get("spans", []):
+                if "ЭЛЕКТРОННЫЙ" in span["text"]:
+                    c = span["color"]
+                    r = ((c >> 16) & 255) / 255.0
+                    g = ((c >> 8) & 255) / 255.0
+                    b_col = (c & 255) / 255.0
+                    return (r, g, b_col)
+    return (0.0, 0.16, 0.42) # Fallback темно-синий
+
 def ingos_vin_cells(page):
     cells = []
     try:
@@ -417,6 +434,10 @@ def ingos_vin_cells(page):
 
 def fill_ingos_pdf(data):
     doc = pymupdf.open("template_ingos.pdf")
+    
+    # Получаем цвет из шаблона
+    ingos_blue = get_ingos_blue(doc[0])
+    
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
@@ -554,8 +575,8 @@ def fill_ingos_pdf(data):
                 for sp in spans: to_delete.append(sp["bbox"])
             is_center = (key in CENTER_FIELDS_INGOS) or key.startswith("driver")
             
-            # Определяем цвет (для номера полиса и премии - синий)
-            text_color = (0, 0.33, 0.58) if key in ["policy_number_str", "premium_str"] else (0,0,0)
+            # Используем извлеченный синий цвет
+            text_color = ingos_blue if key in ["policy_number_str", "premium_str"] else (0,0,0)
             
             inserts.append((r, val, fkey, size, is_center, "box", text_color))
 
