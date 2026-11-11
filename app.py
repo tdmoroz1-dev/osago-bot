@@ -116,8 +116,7 @@ def collect_spans(page, area):
 
 def fill_pdf_to_memory(data, template_name="template.pdf"):
     doc = pymupdf.open(template_name)
-    # ... (Твой код заполнения неограниченного полиса без изменений) ...
-    # [Я полностью скопировал его сюда, он идентичен твоему файлу]
+    
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
@@ -225,7 +224,7 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
 
 def fill_limited_pdf_to_memory(data):
     doc = pymupdf.open("template.pdf")
-    # ... (Твой код заполнения ограниченного полиса без изменений) ...
+    
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
@@ -362,62 +361,83 @@ def fill_limited_pdf_to_memory(data):
     gc.collect()
     return pdf_bytes
 
+
 # =========================================================================
-# ИНТЕРФЕЙС БОТА (МЕНЮ)
+# ИНТЕРФЕЙС С ПОСТОЯННЫМИ КНОПКАМИ
 # =========================================================================
+
+def get_main_keyboard():
+    """Создает постоянную клавиатуру внизу экрана"""
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    btn_alfa = types.KeyboardButton("🔵 АльфаСтрахование")
+    btn_reso = types.KeyboardButton("🟢 РЕСО-Гарантия")
+    btn_ingos = types.KeyboardButton("🔴 Ингосстрах")
+    btn_soglasie = types.KeyboardButton("🟡 Согласие")
+    btn_vsk = types.KeyboardButton("🟣 ВСК")
+    btn_astra = types.KeyboardButton("🟠 Астра")
+    markup.add(btn_alfa, btn_reso, btn_ingos, btn_soglasie, btn_vsk, btn_astra)
+    return markup
+
+# Соответствие между текстом кнопки и ключом компании
+COMPANY_BUTTONS = {
+    "🔵 АльфаСтрахование": "alfa",
+    "🟢 РЕСО-Гарантия": "reso",
+    "🔴 Ингосстрах": "ingos",
+    "🟡 Согласие": "soglasie",
+    "🟣 ВСК": "vsk",
+    "🟠 Астра": "astra",
+}
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    
-    btn_alfa = types.InlineKeyboardButton("🔵 АльфаСтрахование", callback_data="set_alfa")
-    btn_reso = types.InlineKeyboardButton("🟢 РЕСО-Гарантия", callback_data="set_reso")
-    btn_ingos = types.InlineKeyboardButton("🔴 Ингосстрах", callback_data="set_ingos")
-    btn_soglasie = types.InlineKeyboardButton("🟡 Согласие", callback_data="set_soglasie")
-    btn_vsk = types.InlineKeyboardButton("🟣 ВСК", callback_data="set_vsk")
-    
-    markup.add(btn_alfa, btn_reso, btn_ingos, btn_soglasie, btn_vsk)
-    
     bot.send_message(
         message.chat.id, 
-        "👋 Привет! Выбери страховую компанию, для которой будем печатать полис:", 
-        reply_markup=markup
-    )
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('set_'))
-def callback_set_insurer(call):
-    insurer_key = call.data.replace('set_', '')
-    user_choices[call.from_user.id] = insurer_key
-    
-    names = {
-        "alfa": "АльфаСтрахование", "reso": "РЕСО-Гарантия", 
-        "ingos": "Ингосстрах", "soglasie": "Согласие", "vsk": "ВСК"
-    }
-    insurer_name = names.get(insurer_key, "Неизвестная")
-    
-    bot.answer_callback_query(call.id)
-    bot.edit_message_text(
-        chat_id=call.message.chat.id, 
-        message_id=call.message.message_id,
-        text=f"✅ Выбрано: *{insurer_name}*.\n\nТеперь пришли мне JSON с данными для полиса.",
-        parse_mode='Markdown'
+        "👋 Привет! Выбери страховую компанию кнопками внизу экрана, а потом пришли JSON с данными для полиса.", 
+        reply_markup=get_main_keyboard()
     )
 
 @bot.message_handler(content_types=['text'])
 def handle_json(message):
+    raw_text = message.text.strip()
+    
+    # 1. Проверяем, нажал ли пользователь кнопку компании
+    if raw_text in COMPANY_BUTTONS:
+        insurer_key = COMPANY_BUTTONS[raw_text]
+        user_choices[message.from_user.id] = insurer_key
+        names = {
+            "alfa": "АльфаСтрахование", "reso": "РЕСО-Гарантия", 
+            "ingos": "Ингосстрах", "soglasie": "Согласие", 
+            "vsk": "ВСК", "astra": "Астра"
+        }
+        bot.reply_to(
+            message, 
+            f"✅ Выбрано: *{names[insurer_key]}*.\n\nТеперь пришли мне JSON с данными.",
+            parse_mode='Markdown'
+        )
+        return
+    
+    # 2. Если это не JSON и не кнопка — показываем меню
+    if not raw_text.startswith("{"):
+        bot.reply_to(
+            message, 
+            "Пожалуйста, выбери страховую компанию кнопками внизу экрана или пришли JSON с данными.",
+            reply_markup=get_main_keyboard()
+        )
+        return
+    
+    # 3. Обрабатываем JSON
     insurer_key = user_choices.get(message.from_user.id, "alfa")
     
     # ПРОВЕРКА: если выбрана не Альфа, говорим что в разработке
     if insurer_key != "alfa":
-        bot.reply_to(message, "⏳ Эта страховая компания еще в разработке. Пожалуйста, выбери АльфаСтрахование через /start.")
+        bot.reply_to(
+            message, 
+            "⏳ Эта страховая компания еще в разработке (нет шаблона). Пожалуйста, выбери АльфаСтрахование.", 
+            reply_markup=get_main_keyboard()
+        )
         return
 
-    raw_text = message.text.strip().replace("```json", "").replace("```", "").strip()
-    
-    if not raw_text.startswith("{"):
-        bot.reply_to(message, "Ты выбрал АльфаСтрахование. Отправь JSON с данными.")
-        return
-
+    raw_text = raw_text.replace("```json", "").replace("```", "").strip()
     try: data = json.loads(raw_text)
     except json.JSONDecodeError:
         bot.reply_to(message, "❌ Ошибка: это не похоже на JSON.")
