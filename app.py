@@ -31,7 +31,7 @@ FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 
 # =========================================================================
-# ТВОЙ ИДЕАЛЬНЫЙ КОД АЛЬФЫ (НЕ ТРОНУТ НИ ОДИН СИМВОЛ)
+# ТВОЙ ИДЕАЛЬНЫЙ КОД АЛЬФЫ (НЕ ТРОНУТ)
 # =========================================================================
 FIELDS_ALFA = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
@@ -360,15 +360,14 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (ИСПРАВЛЕННЫЙ)
+# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (С УМНЫМ ПОИСКОМ КЛЕТОК VIN)
 # =========================================================================
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87], "bold", 10),
     "owner_fio":               (1, [25.0, 274.03, 500.0, 286.1], "bold", 10),
-    "marka":                   (1, [70.0, 322.47, 150.0, 334.54], "bold", 10), # Сужено для центрирования
-    "model":                   (1, [85.0, 334.54, 130.0, 346.61], "bold", 10), # Сужено для центрирования
-    "vin":                     (1, [191.0, 322.9, 432.0, 335.02], "bold", 10), # Координаты для центрирования
-    "gosnomer":                (1, [470.0, 331.73, 545.0, 343.8], "bold", 10), # Сужено для центрирования
+    "marka":                   (1, [50.0, 322.47, 160.0, 334.54], "bold", 10),
+    "model":                   (1, [50.0, 334.54, 160.0, 346.61], "bold", 10),
+    "gosnomer":                (1, [477.95, 331.73, 560.0, 343.8], "bold", 10),
     
     "premium_str":             (1, [470.0, 40.07, 573.43, 52.14], "bold", 10),
     "policy_number_str":       (1, [299.0, 99.02, 450.0, 115.91], "bold", 14),
@@ -394,11 +393,29 @@ FIELDS_INGOS = {
     "km":                      (1, [450.0, 667.2, 480.0, 678.07], "reg", 9),
     "premium_total":           (1, [510.0, 667.2, 570.0, 678.07], "reg", 9),
 }
-
 CENTER_FIELDS_INGOS = {
-    "marka", "model", "gosnomer", "vin", # <--- ДОБАВЛЕНЫ ДЛЯ ЦЕНТРИРОВАНИЯ
+    "marka", "model", "gosnomer",
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"
 }
+
+def ingos_vin_cells(page):
+    """Находит нарисованные клетки VIN (прямоугольники) на странице."""
+    cells = []
+    try:
+        for d in page.get_drawings():
+            r = d["rect"]
+            if 316 < r.y0 < 340 and 318 < r.y1 < 344 and 9 < r.width < 20 and 8 < r.height < 25:
+                cells.append(pymupdf.Rect(r))
+    except Exception:
+        pass
+    cells.sort(key=lambda r: r.x0)
+    if cells:
+        chain = [cells[0]]
+        for r in cells[1:]:
+            if r.x0 - chain[-1].x0 < 30:
+                chain.append(r)
+        cells = chain
+    return cells
 
 def fill_ingos_pdf(data):
     doc = pymupdf.open("template_ingos.pdf")
@@ -413,37 +430,36 @@ def fill_ingos_pdf(data):
     total_kop = str(data.get("premium_total_kop", "")).strip()
     if not total_kop:
         total_kop = str(data.get("premium_kop", "")).strip()
-    
+
     if total_rub and total_kop:
         if len(total_kop) == 1: total_kop = "0" + total_kop
         formatted_total = f"{total_rub}.{total_kop}"
     else:
         formatted_total = total_rub
 
-    months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+    months = ["января", "февраля", "марта", "апреля", "мая", "июня",
+              "июля", "августа", "сентября", "октября", "ноября", "декабря"]
     month_name = months[today.month - 1]
-    
+
     data["premium_str"] = f"{total_rub} руб. {total_kop} коп."
-    
-    # ФИКС НОМЕРА ПОЛИСА (убрали "№", так как он уже есть в шаблоне)
+
     series = str(data.get('policy_series', '')).strip()
     number = str(data.get('policy_number', '')).strip()
     if series or number:
         data["policy_number_str"] = f"{series} {number}".strip()
     else:
-        data["policy_number_str"] = "ХХХ 0604558947" # Оставляем как в шаблоне
+        data["policy_number_str"] = "ХХХ 0604558947"
 
-    # ФИКС ВИН: добавляем пробелы
-    vin_val = str(data.get("vin", "")).strip()
-    if vin_val:
-        data["vin"] = " ".join(list(vin_val))
+    # VIN забираем ОТДЕЛЬНО (в общий цикл не пускаем!)
+    vin_val = "".join(str(data.get("vin", "")).split()).upper()
+    data.pop("vin", None)
 
     data["date_start_top"] = f"{today.strftime('%d.%m.%Y')} г."
     data["date_end_top"] = f"{end_date.strftime('%d.%m.%Y')} г."
     data["date_period_str"] = f"с {today.strftime('%d.%m.%Y')} г. по {end_date.strftime('%d.%m.%Y')} г."
     data["pts_doc_line"] = f"Вид документа ПАСПОРТ ТС серия {data.get('pts_series', '')} номер {data.get('pts_number', '')}"
     data["date_issue1"] = f"Дата выдачи полиса «{today.day}» {month_name} {today.year} г."
-    
+
     drivers = data.get("drivers", [])
     if drivers:
         data["unlimited_checkbox"] = "[ ] неограниченного количества лиц, допущенных к управлению транспортным средством"
@@ -451,7 +467,7 @@ def fill_ingos_pdf(data):
     else:
         data["unlimited_checkbox"] = "[V] неограниченного количества лиц, допущенных к управлению транспортным средством"
         data["limited_checkbox"] = "[ ] лиц, допущенных к управлению транспортным средством"
-        
+
     if data.get("trailer", "").lower() == "нет":
         data["trailer_checkbox"] = "[] да, [X] нет."
     else:
@@ -461,12 +477,11 @@ def fill_ingos_pdf(data):
         tot_r = int(float(formatted_total))
         tot_k = int(round((float(formatted_total) - tot_r) * 100))
         data["premium_total"] = f"{tot_r:,}".replace(',', ' ') + f",{tot_k:02d}"
-    except: 
+    except:
         data["premium_total"] = formatted_total
 
     all_fields = dict(FIELDS_INGOS)
-    
-    # Водители (если есть)
+
     driver_rows = [(483.44, 495.51), (496.01, 508.08), (508.58, 520.65), (521.15, 533.22), (533.72, 545.79)]
     if drivers:
         for i, d in enumerate(drivers[:5]):
@@ -483,23 +498,54 @@ def fill_ingos_pdf(data):
     for key, (pno, rect, fkey, size) in all_fields.items():
         if key not in data: continue
         val = str(data[key]).strip()
-        
         if key in DECIMAL_FIELDS:
-            try: val = f"{float(val):.2f}" 
+            try: val = f"{float(val):.2f}"
             except ValueError: pass
-                
         by_page.setdefault(pno, []).append((rect, val, fkey, size, key))
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
-        to_delete, inserts = [], []
+        to_delete, inserts, vin_inserts = [], [], []
+
+        # ---------- VIN ПО КЛЕТОЧКАМ ----------
+        if pno == 1 and vin_val:
+            VIN_RECT = [186, 318, 440, 340]
+            vspans = collect_spans(page, VIN_RECT)
+            for sp in vspans:
+                to_delete.append(sp["bbox"])
+            vbase = vspans[0]["origin"][1] if vspans and "origin" in vspans[0] else 332.6
+
+            cells = ingos_vin_cells(page)
+            if len(cells) >= len(vin_val):
+                centers = [(c.x0 + c.x1) / 2 for c in cells]
+            else:
+                boxes = []
+                for sp in vspans:
+                    t = sp["text"].strip()
+                    x0, y0, x1, y1 = sp["bbox"]
+                    if len(t) == 1: boxes.append((x0, x1))
+                    else:
+                        w = (x1 - x0) / len(t)
+                        for i in range(len(t)): boxes.append((x0 + i*w, x0 + (i+1)*w))
+                boxes.sort()
+                if boxes:
+                    c0 = (boxes[0][0] + boxes[0][1]) / 2
+                    cN = (boxes[-1][0] + boxes[-1][1]) / 2
+                    p = (cN - c0) / max(1, len(boxes) - 1)
+                    centers = [c0 + i * p for i in range(len(vin_val))]
+                else:
+                    centers = [198.5 + i * 14.3 for i in range(len(vin_val))]
+
+            for i, ch in enumerate(vin_val):
+                w = FONT_BLD_OBJ.text_length(ch, fontsize=10)
+                vin_inserts.append((centers[i] - w / 2, vbase, ch))
+
+        # ---------- остальные поля ----------
         for (rect, val, fkey, size, key) in items:
             r = pymupdf.Rect(rect)
             spans = collect_spans(page, r)
-            
             if spans:
                 for sp in spans: to_delete.append(sp["bbox"])
-            
             is_center = (key in CENTER_FIELDS_INGOS) or key.startswith("driver")
             inserts.append((r, val, fkey, size, is_center, "box"))
 
@@ -510,11 +556,14 @@ def fill_ingos_pdf(data):
         page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
+        # сначала VIN по клеточкам
+        for x, b, ch in vin_inserts:
+            page.insert_text((x, b), ch, fontname="tnewb", fontsize=10, color=(0,0,0))
+
         for item in inserts:
             r, val, fkey, size, is_center, _ = item
             if not val: continue
             fname = "tnewb" if fkey == "bold" else "tnew"
-            
             if is_center:
                 f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
                 text_w = f_obj.text_length(val, fontsize=size)
@@ -522,7 +571,6 @@ def fill_ingos_pdf(data):
                 if text_w >= r.width: x_new = r.x0
             else:
                 x_new = r.x0
-                
             baseline = r.y1 - 0.22 * size
             page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
 
@@ -532,7 +580,7 @@ def fill_ingos_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# ИНТЕРФЕЙС БОТА
+# ИНТЕРФЕЙС БОТА (ДВЕ КНОПКИ)
 # =========================================================================
 
 @bot.message_handler(commands=['start'])
