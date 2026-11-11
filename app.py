@@ -360,18 +360,18 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (на основе свежего скана)
+# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (ИСПРАВЛЕННЫЙ)
 # =========================================================================
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87], "bold", 10),
     "owner_fio":               (1, [25.0, 274.03, 500.0, 286.1], "bold", 10),
     "marka":                   (1, [50.0, 322.47, 160.0, 334.54], "bold", 10),
     "model":                   (1, [50.0, 334.54, 160.0, 346.61], "bold", 10),
-    "vin":                     (1, [190.0, 322.9, 440.0, 335.02], "bold", 10),
+    "vin":                     (1, [191.0, 322.9, 440.0, 335.02], "bold", 10),
     "gosnomer":                (1, [477.95, 331.73, 560.0, 343.8], "bold", 10),
     
     "premium_str":             (1, [470.0, 40.07, 573.43, 52.14], "bold", 10),
-    "policy_number_str":       (1, [273.3, 99.02, 440.0, 115.91], "bold", 14),
+    "policy_number_str":       (1, [299.0, 99.02, 450.0, 115.91], "bold", 14),
     
     "date_start_top":          (1, [506.14, 162.21, 560.72, 171.87], "bold", 8),
     "date_end_top":            (1, [506.14, 177.57, 560.72, 187.22], "bold", 8),
@@ -394,7 +394,9 @@ FIELDS_INGOS = {
     "km":                      (1, [450.0, 667.2, 480.0, 678.07], "reg", 9),
     "premium_total":           (1, [510.0, 667.2, 570.0, 678.07], "reg", 9),
 }
+
 CENTER_FIELDS_INGOS = {
+    "marka", "model", "gosnomer", # <--- ДОБАВЛЕНО ЦЕНТРИРОВАНИЕ
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"
 }
 
@@ -422,7 +424,20 @@ def fill_ingos_pdf(data):
     month_name = months[today.month - 1]
     
     data["premium_str"] = f"{total_rub} руб. {total_kop} коп."
-    data["policy_number_str"] = f"№  {data.get('policy_series', '')} {data.get('policy_number', '')}"
+    
+    # ФИКС НОМЕРА ПОЛИСА: если пусто, не трогаем
+    series = str(data.get('policy_series', '')).strip()
+    number = str(data.get('policy_number', '')).strip()
+    if series or number:
+        data["policy_number_str"] = f"№  {series} {number}".strip()
+    else:
+        data["policy_number_str"] = "№  ХХХ 0604558947" # Оставляем как в шаблоне
+
+    # ФИКС ВИН: добавляем пробелы, чтобы не слипалось
+    vin_val = str(data.get("vin", "")).strip()
+    if vin_val:
+        data["vin"] = " ".join(list(vin_val))
+
     data["date_start_top"] = f"{today.strftime('%d.%m.%Y')} г."
     data["date_end_top"] = f"{end_date.strftime('%d.%m.%Y')} г."
     data["date_period_str"] = f"с {today.strftime('%d.%m.%Y')} г. по {end_date.strftime('%d.%m.%Y')} г."
