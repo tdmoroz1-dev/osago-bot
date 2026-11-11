@@ -182,11 +182,11 @@ def fill_alfa_pdf(data):
                 for i, ch in enumerate(clean_val):
                     if i >= len(char_boxes): break
                     x0, y0, x1, y1 = char_boxes[i]
-                    inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char"))
+                    inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char", (0,0,0)))
             else:
                 r = pymupdf.Rect(rect)
                 is_center = key in CENTER_FIELDS_ALFA
-                inserts.append((r, val, fkey, size, is_center, "box"))
+                inserts.append((r, val, fkey, size, is_center, "box", (0,0,0)))
 
         if to_delete:
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
@@ -196,12 +196,12 @@ def fill_alfa_pdf(data):
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
         for item in inserts:
-            if item[-1] == "char":
-                x0, baseline, val, fkey, size, _ = item
+            if item[-2] == "char":
+                x0, baseline, val, fkey, size, _, color = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
-                if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
-            elif item[-1] == "box":
-                r, val, fkey, size, is_center, _ = item
+                if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=color)
+            elif item[-2] == "box":
+                r, val, fkey, size, is_center, _, color = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
                 
                 if is_center:
@@ -213,7 +213,7 @@ def fill_alfa_pdf(data):
                     x_new = r.x0
                     
                 baseline = r.y1 - 0.22 * size
-                if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
+                if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=color)
 
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
     doc.close()
@@ -298,7 +298,7 @@ def fill_alfa_limited_pdf(data):
                 if spans:
                     for sp in spans: to_delete.append(sp["bbox"])
                 if val: 
-                    inserts.append((r, val, fkey, size, True, "box"))
+                    inserts.append((r, val, fkey, size, True, "box", (0,0,0)))
                 continue
 
             if spans:
@@ -319,12 +319,12 @@ def fill_alfa_limited_pdf(data):
                 for i, ch in enumerate(clean_val):
                     if i >= len(char_boxes): break
                     x0, y0, x1, y1 = char_boxes[i]
-                    inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char"))
+                    inserts.append((x0, y1 - 0.22 * size, ch, fkey, size, "char", (0,0,0)))
             else:
                 is_center = True if key.startswith("driver") else (key in CENTER_FIELDS_ALFA)
                 if key.startswith("driver"):
                     r = pymupdf.Rect(r.x0, r.y0 + DRIVER_DY, r.x1, r.y1 + DRIVER_DY)
-                inserts.append((r, val, fkey, size, is_center, "box"))
+                inserts.append((r, val, fkey, size, is_center, "box", (0,0,0)))
 
         if to_delete:
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
@@ -334,12 +334,12 @@ def fill_alfa_limited_pdf(data):
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
         for item in inserts:
-            if item[-1] == "char":
-                x0, baseline, val, fkey, size, _ = item
+            if item[-2] == "char":
+                x0, baseline, val, fkey, size, _, color = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
-                if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
-            elif item[-1] == "box":
-                r, val, fkey, size, is_center, _ = item
+                if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=color)
+            elif item[-2] == "box":
+                r, val, fkey, size, is_center, _, color = item
                 fname = "tnewb" if fkey == "bold" else "tnew"
                 
                 if is_center:
@@ -351,7 +351,7 @@ def fill_alfa_limited_pdf(data):
                     x_new = r.x0
                     
                 baseline = r.y1 - 0.22 * size
-                if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
+                if val: page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=color)
 
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
     doc.close()
@@ -359,17 +359,17 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (С ИДЕАЛЬНЫМ ПОИСКОМ КЛЕТОК VIN)
+# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (С ЦВЕТОМ И ЦЕНТРОВКОЙ)
 # =========================================================================
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87], "bold", 10),
     "owner_fio":               (1, [25.0, 274.03, 500.0, 286.1], "bold", 10),
     "marka":                   (1, [50.0, 322.47, 160.0, 334.54], "bold", 10),
     "model":                   (1, [50.0, 334.54, 160.0, 346.61], "bold", 10),
-    "gosnomer":                (1, [477.95, 331.73, 560.0, 343.8], "bold", 10),
+    "gosnomer":                (1, [450.0, 331.73, 570.0, 343.8], "bold", 10), # Расширили рамку для центровки
     
-    "premium_str":             (1, [470.0, 40.07, 573.43, 52.14], "bold", 10),
-    "policy_number_str":       (1, [299.0, 99.02, 450.0, 115.91], "bold", 14),
+    "premium_str":             (1, [450.0, 40.07, 580.0, 52.14], "bold", 10),  # Расширили для центровки
+    "policy_number_str":       (1, [250.0, 99.02, 450.0, 115.91], "bold", 14), # Расширили для центровки
     
     "date_start_top":          (1, [506.14, 162.21, 560.72, 171.87], "bold", 8),
     "date_end_top":            (1, [506.14, 177.57, 560.72, 187.22], "bold", 8),
@@ -393,17 +393,15 @@ FIELDS_INGOS = {
     "premium_total":           (1, [510.0, 667.2, 570.0, 678.07], "reg", 9),
 }
 CENTER_FIELDS_INGOS = {
-    "marka", "model", "gosnomer",
+    "marka", "model", "gosnomer", "policy_number_str", "premium_str",
     "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"
 }
 
 def ingos_vin_cells(page):
-    """Находит нарисованные клетки VIN (прямоугольники) на странице."""
     cells = []
     try:
         for d in page.get_drawings():
             r = d["rect"]
-            # Ищем клетки в зоне VIN (примерно y=316-340, x=318-440)
             if 316 < r.y0 < 340 and 318 < r.y1 < 344 and 8 < r.width < 25 and 8 < r.height < 25:
                 cells.append(pymupdf.Rect(r))
     except Exception:
@@ -412,7 +410,7 @@ def ingos_vin_cells(page):
     if cells:
         chain = [cells[0]]
         for r in cells[1:]:
-            if r.x0 - chain[-1].x0 < 30: # Фильтруем лишние прямоугольники
+            if r.x0 - chain[-1].x0 < 30:
                 chain.append(r)
         cells = chain
     return cells
@@ -450,7 +448,6 @@ def fill_ingos_pdf(data):
     else:
         data["policy_number_str"] = "ХХХ 0604558947"
 
-    # VIN забираем ОТДЕЛЬНО, очищаем от пробелов
     vin_val = "".join(str(data.get("vin", "")).split()).upper()
     data.pop("vin", None)
 
@@ -517,15 +514,13 @@ def fill_ingos_pdf(data):
             cells = ingos_vin_cells(page)
             
             if len(cells) >= 17:
-                # Если нашли нарисованные клетки, ставим букву ровно в центр каждой
                 for i, ch in enumerate(vin_val):
                     cell = cells[i]
                     w = FONT_BLD_OBJ.text_length(ch, fontsize=11)
                     x = cell.x0 + (cell.width - w) / 2
-                    y = cell.y1 - 3.5  # Базовая линия чуть выше низа клетки
+                    y = cell.y1 - 3.5
                     vin_inserts.append((x, y, ch))
             else:
-                # Запасной вариант: делим ширину старого текста на 17 частей
                 boxes = []
                 for sp in vspans:
                     t = sp["text"]
@@ -558,7 +553,11 @@ def fill_ingos_pdf(data):
             if spans:
                 for sp in spans: to_delete.append(sp["bbox"])
             is_center = (key in CENTER_FIELDS_INGOS) or key.startswith("driver")
-            inserts.append((r, val, fkey, size, is_center, "box"))
+            
+            # Определяем цвет (для номера полиса и премии - синий)
+            text_color = (0, 0.33, 0.58) if key in ["policy_number_str", "premium_str"] else (0,0,0)
+            
+            inserts.append((r, val, fkey, size, is_center, "box", text_color))
 
         if to_delete:
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
@@ -567,12 +566,12 @@ def fill_ingos_pdf(data):
         page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
         page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
-        # Сначала вставляем VIN по одной букве
+        # Сначала вставляем VIN по одной букве (черным)
         for x, b, ch in vin_inserts:
             page.insert_text((x, b), ch, fontname="tnewb", fontsize=11, color=(0,0,0))
 
         for item in inserts:
-            r, val, fkey, size, is_center, _ = item
+            r, val, fkey, size, is_center, _, color = item
             if not val: continue
             fname = "tnewb" if fkey == "bold" else "tnew"
             if is_center:
@@ -583,7 +582,7 @@ def fill_ingos_pdf(data):
             else:
                 x_new = r.x0
             baseline = r.y1 - 0.22 * size
-            page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
+            page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=color)
 
     pdf_bytes = doc.tobytes(garbage=4, deflate=True)
     doc.close()
