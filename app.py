@@ -12,7 +12,6 @@ if not BOT_TOKEN:
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 
-# Хранилище выбора пользователя (какую страховую он нажал)
 user_choices = {}
 
 def load_font(paths):
@@ -26,14 +25,18 @@ def load_font(paths):
 
 REG_BUF = load_font(["times.ttf", r"C:\Windows\Fonts\times.ttf"])
 BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
+TAHOMA_BUF = load_font(["tahoma.ttf", r"C:\Windows\Fonts\tahoma.ttf"])
+TAHOMA_BLD_BUF = load_font(["tahomabd.ttf", r"C:\Windows\Fonts\tahomabd.ttf"])
 
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
+FONT_TAHOMA_OBJ = pymupdf.Font(fontbuffer=TAHOMA_BUF)
+FONT_TAHOMA_BLD_OBJ = pymupdf.Font(fontbuffer=TAHOMA_BLD_BUF)
 
 # =========================================================================
-# ТВОЙ ИДЕАЛЬНЫЙ КОД ДЛЯ АЛЬФЫ (Я ЕГО НЕ ТРОГАЛ)
+# ПРОФИЛЬ АЛЬФА (Твой идеальный код)
 # =========================================================================
-FIELDS = {
+FIELDS_ALFA = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
     "owner_fio":               (1, [16.0, 348.83, 230.86, 361.01], "reg",  11),
     "marka":                   (1, [14.0, 402.65, 184.0, 414.83], "reg",  11),
@@ -68,6 +71,60 @@ FIELDS = {
     "km":                      (1, [431.0, 703.77, 465.0, 711.52],   "reg",  7),
     "premium_total":           (1, [499.0, 703.77, 559.0, 711.52],   "reg",  7),
 }
+
+# =========================================================================
+# ПРОФИЛЬ ИНГОССТРАХ (Координаты из сканера + примерные)
+# =========================================================================
+FIELDS_INGOS = {
+    "policyholder_fio":        (1, [30.69, 251.8, 204.0, 263.87], "tahoma",  10),
+    "owner_fio":               (1, [28.35, 274.03, 201.54, 286.1], "tahoma",  10),
+    "marka":                   (1, [70.11, 322.47, 144.9, 334.54], "tahoma",  10),
+    "model":                   (1, [92.21, 334.54, 119.87, 346.61], "tahoma",  10),
+    
+    # ВИН и Госномер (примерно под маркой)
+    "vin":                     (1, [28.35, 350.0, 250.0, 360.0], "tahoma", 10),
+    "gosnomer":                (1, [400.0, 350.0, 550.0, 360.0], "tahoma", 10),
+    
+    # ПТС (по данным сканера y=363.31)
+    "pts_series":              (1, [180.0, 363.31, 220.0, 372.96], "tahoma_bold", 8),
+    "pts_number":              (1, [260.0, 363.31, 300.0, 372.96], "tahoma_bold", 8),
+    
+    # Премия (примерно, сверху справа)
+    "premium_thousands":       (1, [450.0, 80.0, 480.0, 90.0], "tahoma_bold", 10),
+    "premium_hundreds":        (1, [480.0, 80.0, 500.0, 90.0], "tahoma_bold", 10),
+    "premium_kop":             (1, [510.0, 80.0, 530.0, 90.0], "tahoma_bold", 10),
+    
+    "policy_series":           (1, [100.0, 100.0, 150.0, 110.0], "tahoma_bold", 10),
+    "policy_number":           (1, [200.0, 100.0, 300.0, 110.0], "tahoma_bold", 10),
+    
+    # Даты (примерно, посередине)
+    "date_start":              (1, [350.0, 170.0, 500.0, 180.0], "tahoma",  9),
+    "date_end":                (1, [350.0, 210.0, 500.0, 220.0], "tahoma",  9),
+    "date_period_start":       (1, [50.0, 215.0, 150.0, 225.0], "tahoma",  9),
+    "date_period_end":         (1, [200.0, 215.0, 300.0, 225.0], "tahoma",  9),
+    
+    # Даты внизу (по данным сканера y=744.16)
+    "date_issue1":             (1, [100.0, 744.16, 150.0, 753.81], "tahoma",  8),
+    "date_issue2":             (1, [200.0, 744.16, 250.0, 753.81], "tahoma",  8),
+    "date_design_1":           (1, [350.0, 700.0, 400.0, 710.0], "tahoma",  8),
+    "date_design_2":           (1, [400.0, 700.0, 500.0, 710.0], "tahoma",  8),
+    
+    "trailer_old_x":           (1, [220.19, 315.0, 226.01, 322.0], "tahoma",  6),
+    "trailer_new_x":           (1, [248.00, 315.0, 254.00, 322.0], "tahoma",  6),
+    "premium_in_words":        (1, [100.0, 700.0, 400.0, 710.0], "tahoma",  8),
+    
+    # Коэффициенты (по данным сканера y=667.2)
+    "tb":                      (1, [64.59, 667.2, 84.22, 678.07], "tahoma",  9),
+    "kt":                      (1, [90.0, 667.2, 110.0, 678.07], "tahoma",  9),
+    "kbm":                     (1, [120.0, 667.2, 140.0, 678.07], "tahoma",  9),
+    "kvs":                     (1, [150.0, 667.2, 170.0, 678.07], "tahoma",  9),
+    "ko":                      (1, [180.0, 667.2, 200.0, 678.07], "tahoma",  9),
+    "ks":                      (1, [210.0, 667.2, 230.0, 678.07], "tahoma",  9),
+    "kp":                      (1, [240.0, 667.2, 260.0, 678.07], "tahoma",  9),
+    "km":                      (1, [270.0, 667.2, 290.0, 678.07], "tahoma",  9),
+    "premium_total":           (1, [480.0, 667.2, 560.0, 678.07], "tahoma",  9),
+}
+
 
 CENTER_FIELDS = {
     "marka", "model",
@@ -114,7 +171,7 @@ def collect_spans(page, area):
                     out.append(sp)
     return out
 
-def fill_pdf_to_memory(data, template_name="template.pdf"):
+def fill_pdf_to_memory(data, template_name, fields_map, font_reg, font_bld, font_obj_reg, font_obj_bld):
     doc = pymupdf.open(template_name)
     
     today = datetime.date.today()
@@ -147,7 +204,7 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
     data["premium_in_words"] = f"{total_rub} рублей {total_kop} копеек. Дата оформления:"
 
     by_page = {}
-    for key, (pno, rect, fkey, size) in FIELDS.items():
+    for key, (pno, rect, fkey, size) in fields_map.items():
         if key not in data: continue
         val = str(data[key]).strip()
         
@@ -194,20 +251,20 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
             page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
 
-        page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
-        page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
+        page.insert_font(fontname="font_reg", fontbuffer=font_reg)
+        page.insert_font(fontname="font_bld", fontbuffer=font_bld)
 
         for item in inserts:
             if item[-1] == "char":
                 x0, baseline, val, fkey, size, _ = item
-                fname = "tnewb" if fkey == "bold" else "tnew"
+                fname = "font_bld" if fkey in ["bold", "tahoma_bold"] else "font_reg"
                 if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
             elif item[-1] == "box":
                 r, val, fkey, size, is_center, _ = item
-                fname = "tnewb" if fkey == "bold" else "tnew"
+                fname = "font_bld" if fkey in ["bold", "tahoma_bold"] else "font_reg"
                 
                 if is_center:
-                    f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
+                    f_obj = font_obj_bld if fkey in ["bold", "tahoma_bold"] else font_obj_reg
                     text_w = f_obj.text_length(val, fontsize=size)
                     x_new = r.x0 + (r.width - text_w) / 2
                     if text_w >= r.width: x_new = r.x0
@@ -222,8 +279,8 @@ def fill_pdf_to_memory(data, template_name="template.pdf"):
     gc.collect()
     return pdf_bytes
 
-def fill_limited_pdf_to_memory(data):
-    doc = pymupdf.open("template.pdf")
+def fill_limited_pdf_to_memory(data, template_name, fields_map, font_reg, font_bld, font_obj_reg, font_obj_bld):
+    doc = pymupdf.open(template_name)
     
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
@@ -254,7 +311,7 @@ def fill_limited_pdf_to_memory(data):
 
     data["premium_in_words"] = f"{total_rub} рублей {total_kop} копеек. Дата оформления:"
 
-    all_fields = dict(FIELDS)
+    all_fields = dict(fields_map)
     
     all_fields["limited_checkbox"] = (1, [392.97, 517.61, 398.03, 525.36], "reg", 7)
     all_fields["unlimited_checkbox"] = (1, [392.97, 507.08, 398.03, 514.83], "reg", 7)
@@ -333,20 +390,20 @@ def fill_limited_pdf_to_memory(data):
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
             page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
 
-        page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
-        page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
+        page.insert_font(fontname="font_reg", fontbuffer=font_reg)
+        page.insert_font(fontname="font_bld", fontbuffer=font_bld)
 
         for item in inserts:
             if item[-1] == "char":
                 x0, baseline, val, fkey, size, _ = item
-                fname = "tnewb" if fkey == "bold" else "tnew"
+                fname = "font_bld" if fkey in ["bold", "tahoma_bold"] else "font_reg"
                 if val: page.insert_text((x0, baseline), val, fontname=fname, fontsize=size, color=(0,0,0))
             elif item[-1] == "box":
                 r, val, fkey, size, is_center, _ = item
-                fname = "tnewb" if fkey == "bold" else "tnew"
+                fname = "font_bld" if fkey in ["bold", "tahoma_bold"] else "font_reg"
                 
                 if is_center:
-                    f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
+                    f_obj = font_obj_bld if fkey in ["bold", "tahoma_bold"] else font_obj_reg
                     text_w = f_obj.text_length(val, fontsize=size)
                     x_new = r.x0 + (r.width - text_w) / 2
                     if text_w >= r.width: x_new = r.x0
@@ -361,28 +418,25 @@ def fill_limited_pdf_to_memory(data):
     gc.collect()
     return pdf_bytes
 
-
 # =========================================================================
 # ИНТЕРФЕЙС С ПОСТОЯННЫМИ КНОПКАМИ
 # =========================================================================
 
 def get_main_keyboard():
-    """Создает постоянную клавиатуру внизу экрана"""
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     btn_alfa = types.KeyboardButton("🔵 АльфаСтрахование")
-    btn_reso = types.KeyboardButton("🟢 РЕСО-Гарантия")
     btn_ingos = types.KeyboardButton("🔴 Ингосстрах")
+    btn_reso = types.KeyboardButton("🟢 РЕСО-Гарантия")
     btn_soglasie = types.KeyboardButton("🟡 Согласие")
     btn_vsk = types.KeyboardButton("🟣 ВСК")
     btn_astra = types.KeyboardButton("🟠 Астра")
-    markup.add(btn_alfa, btn_reso, btn_ingos, btn_soglasie, btn_vsk, btn_astra)
+    markup.add(btn_alfa, btn_ingos, btn_reso, btn_soglasie, btn_vsk, btn_astra)
     return markup
 
-# Соответствие между текстом кнопки и ключом компании
 COMPANY_BUTTONS = {
     "🔵 АльфаСтрахование": "alfa",
-    "🟢 РЕСО-Гарантия": "reso",
     "🔴 Ингосстрах": "ingos",
+    "🟢 РЕСО-Гарантия": "reso",
     "🟡 Согласие": "soglasie",
     "🟣 ВСК": "vsk",
     "🟠 Астра": "astra",
@@ -400,13 +454,12 @@ def send_welcome(message):
 def handle_json(message):
     raw_text = message.text.strip()
     
-    # 1. Проверяем, нажал ли пользователь кнопку компании
     if raw_text in COMPANY_BUTTONS:
         insurer_key = COMPANY_BUTTONS[raw_text]
         user_choices[message.from_user.id] = insurer_key
         names = {
-            "alfa": "АльфаСтрахование", "reso": "РЕСО-Гарантия", 
-            "ingos": "Ингосстрах", "soglasie": "Согласие", 
+            "alfa": "АльфаСтрахование", "ingos": "Ингосстрах",
+            "reso": "РЕСО-Гарантия", "soglasie": "Согласие", 
             "vsk": "ВСК", "astra": "Астра"
         }
         bot.reply_to(
@@ -416,7 +469,6 @@ def handle_json(message):
         )
         return
     
-    # 2. Если это не JSON и не кнопка — показываем меню
     if not raw_text.startswith("{"):
         bot.reply_to(
             message, 
@@ -425,14 +477,12 @@ def handle_json(message):
         )
         return
     
-    # 3. Обрабатываем JSON
     insurer_key = user_choices.get(message.from_user.id, "alfa")
     
-    # ПРОВЕРКА: если выбрана не Альфа, говорим что в разработке
-    if insurer_key != "alfa":
+    if insurer_key not in ["alfa", "ingos"]:
         bot.reply_to(
             message, 
-            "⏳ Эта страховая компания еще в разработке (нет шаблона). Пожалуйста, выбери АльфаСтрахование.", 
+            "⏳ Эта страховая компания еще в разработке (нет шаблона). Выбери Альфа или Ингосстрах.", 
             reply_markup=get_main_keyboard()
         )
         return
@@ -453,12 +503,29 @@ def handle_json(message):
     drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
 
     try:
+        if insurer_key == "alfa":
+            t_name = "template.pdf"
+            f_map = FIELDS_ALFA
+            f_reg = REG_BUF
+            f_bld = BLD_BUF
+            f_obj_reg = FONT_REG_OBJ
+            f_obj_bld = FONT_BLD_OBJ
+            name_ru = "Альфа"
+        else: # ingos
+            t_name = "template_ingos.pdf"
+            f_map = FIELDS_INGOS
+            f_reg = TAHOMA_BUF
+            f_bld = TAHOMA_BLD_BUF
+            f_obj_reg = FONT_TAHOMA_OBJ
+            f_obj_bld = FONT_TAHOMA_BLD_OBJ
+            name_ru = "Ингос"
+
         if drivers:
-            bot.reply_to(message, f"📄 Альфа. Водителей: {len(drivers)}. Тип: Ограниченный. ⏳ Генерирую...")
-            pdf_data = fill_limited_pdf_to_memory(data)
+            bot.reply_to(message, f"📄 {name_ru}. Водителей: {len(drivers)}. Тип: Ограниченный. ⏳ Генерирую...")
+            pdf_data = fill_limited_pdf_to_memory(data, t_name, f_map, f_reg, f_bld, f_obj_reg, f_obj_bld)
         else:
-            bot.reply_to(message, "📄 Альфа. Водителей: 0. Тип: Неограниченный. ⏳ Генерирую...")
-            pdf_data = fill_pdf_to_memory(data)
+            bot.reply_to(message, f"📄 {name_ru}. Водителей: 0. Тип: Неограниченный. ⏳ Генерирую...")
+            pdf_data = fill_pdf_to_memory(data, t_name, f_map, f_reg, f_bld, f_obj_reg, f_obj_bld)
 
         owner = data.get("owner_fio", "Полис_ОСАГО").strip()
         safe_name = "".join([c for c in owner if c not in r'\/:*?"<>|']).strip() or "Полис_ОСАГО"
