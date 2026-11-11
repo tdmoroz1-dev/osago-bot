@@ -23,14 +23,24 @@ def load_font(paths):
         except: continue
     return None
 
+# Загружаем Times New Roman (для Альфы)
 REG_BUF = load_font(["times.ttf", r"C:\Windows\Fonts\times.ttf"])
 BLD_BUF = load_font(["timesbd.ttf", r"C:\Windows\Fonts\timesbd.ttf"])
+# Загружаем Tahoma (для Ингосстраха)
+THM_BUF = load_font(["tahoma.ttf", r"C:\Windows\Fonts\tahoma.ttf"])
+THM_BD_BUF = load_font(["tahomabd.ttf", r"C:\Windows\Fonts\tahomabd.ttf"])
+
+# Если Tahoma нет, используем Times как запасной
+if THM_BUF is None: THM_BUF = REG_BUF
+if THM_BD_BUF is None: THM_BD_BUF = BLD_BUF
 
 FONT_REG_OBJ = pymupdf.Font(fontbuffer=REG_BUF)
 FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
+THM_OBJ = pymupdf.Font(fontbuffer=THM_BUF)
+THM_BD_OBJ = pymupdf.Font(fontbuffer=THM_BD_BUF)
 
 # =========================================================================
-# ТВОЙ ИДЕАЛЬНЫЙ КОД АЛЬФЫ (НЕ ТРОНУТ)
+# АЛЬФА (НЕ ТРОНУТА)
 # =========================================================================
 FIELDS_ALFA = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
@@ -359,18 +369,15 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# НОВЫЙ КОД ДЛЯ ИНГОССТРАХА (С ТОЧНЫМ ЦВЕТОМ ИЗ ШАБЛОНА)
+# ИНГОССТРАХ (С ИСПОЛЬЗОВАНИЕМ TAнОМА И ЦВЕТА ИЗ ШАБЛОНА)
 # =========================================================================
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87], "bold", 10),
     "owner_fio":               (1, [25.0, 274.03, 500.0, 286.1], "bold", 10),
     "marka":                   (1, [50.0, 322.47, 160.0, 334.54], "bold", 10),
     "model":                   (1, [50.0, 334.54, 160.0, 346.61], "bold", 10),
-    
-    # Госномер сдвинут левее (центр надписи)
     "gosnomer":                (1, [465.0, 331.73, 555.0, 343.8], "bold", 10),
     
-    # Широкие рамки для центрирования синих надписей
     "premium_str":             (1, [450.0, 40.07, 580.0, 52.14], "bold", 10),
     "policy_number_str":       (1, [250.0, 99.02, 450.0, 115.91], "bold", 14),
     
@@ -401,7 +408,6 @@ CENTER_FIELDS_INGOS = {
 }
 
 def get_ingos_blue(page):
-    """Извлекает точный цвет надписи 'ЭЛЕКТРОННЫЙ' из шаблона."""
     for block in page.get_text("dict").get("blocks", []):
         if block.get("type") != 0: continue
         for line in block.get("lines", []):
@@ -412,7 +418,7 @@ def get_ingos_blue(page):
                     g = ((c >> 8) & 255) / 255.0
                     b_col = (c & 255) / 255.0
                     return (r, g, b_col)
-    return (0.0, 0.16, 0.42) # Fallback темно-синий
+    return (0.0, 0.16, 0.42)
 
 def ingos_vin_cells(page):
     cells = []
@@ -434,10 +440,7 @@ def ingos_vin_cells(page):
 
 def fill_ingos_pdf(data):
     doc = pymupdf.open("template_ingos.pdf")
-    
-    # Получаем цвет из шаблона
     ingos_blue = get_ingos_blue(doc[0])
-    
     today = datetime.date.today()
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
@@ -525,7 +528,6 @@ def fill_ingos_pdf(data):
         page = doc[pno - 1]
         to_delete, inserts, vin_inserts = [], [], []
 
-        # ---------- VIN ПО КЛЕТОЧКАМ ----------
         if pno == 1 and vin_val:
             VIN_RECT = [186, 318, 440, 340]
             vspans = collect_spans(page, VIN_RECT)
@@ -537,7 +539,7 @@ def fill_ingos_pdf(data):
             if len(cells) >= 17:
                 for i, ch in enumerate(vin_val):
                     cell = cells[i]
-                    w = FONT_BLD_OBJ.text_length(ch, fontsize=11)
+                    w = THM_BD_OBJ.text_length(ch, fontsize=11)
                     x = cell.x0 + (cell.width - w) / 2
                     y = cell.y1 - 3.5
                     vin_inserts.append((x, y, ch))
@@ -564,10 +566,9 @@ def fill_ingos_pdf(data):
 
                 for i, ch in enumerate(vin_val):
                     if i < len(centers):
-                        w = FONT_BLD_OBJ.text_length(ch, fontsize=11)
+                        w = THM_BD_OBJ.text_length(ch, fontsize=11)
                         vin_inserts.append((centers[i] - w / 2, 332.5, ch))
 
-        # ---------- остальные поля ----------
         for (rect, val, fkey, size, key) in items:
             r = pymupdf.Rect(rect)
             spans = collect_spans(page, r)
@@ -575,7 +576,6 @@ def fill_ingos_pdf(data):
                 for sp in spans: to_delete.append(sp["bbox"])
             is_center = (key in CENTER_FIELDS_INGOS) or key.startswith("driver")
             
-            # Используем извлеченный синий цвет
             text_color = ingos_blue if key in ["policy_number_str", "premium_str"] else (0,0,0)
             
             inserts.append((r, val, fkey, size, is_center, "box", text_color))
@@ -584,19 +584,18 @@ def fill_ingos_pdf(data):
             for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
             page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
 
-        page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
-        page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
+        page.insert_font(fontname="thm", fontbuffer=THM_BUF)
+        page.insert_font(fontname="thmb", fontbuffer=THM_BD_BUF)
 
-        # Сначала вставляем VIN по одной букве (черным)
         for x, b, ch in vin_inserts:
-            page.insert_text((x, b), ch, fontname="tnewb", fontsize=11, color=(0,0,0))
+            page.insert_text((x, b), ch, fontname="thmb", fontsize=11, color=(0,0,0))
 
         for item in inserts:
             r, val, fkey, size, is_center, _, color = item
             if not val: continue
-            fname = "tnewb" if fkey == "bold" else "tnew"
+            fname = "thmb" if fkey == "bold" else "thm"
             if is_center:
-                f_obj = FONT_BLD_OBJ if fkey == "bold" else FONT_REG_OBJ
+                f_obj = THM_BD_OBJ if fkey == "bold" else THM_OBJ
                 text_w = f_obj.text_length(val, fontsize=size)
                 x_new = r.x0 + (r.width - text_w) / 2
                 if text_w >= r.width: x_new = r.x0
@@ -611,7 +610,7 @@ def fill_ingos_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# ИНТЕРФЕЙС БОТА (ДВЕ КНОПКИ)
+# ИНТЕРФЕЙС БОТА
 # =========================================================================
 
 @bot.message_handler(commands=['start'])
@@ -620,34 +619,25 @@ def send_welcome(message):
     btn_alfa = types.InlineKeyboardButton("🔵 АльфаСтрахование", callback_data="set_alfa")
     btn_ingo = types.InlineKeyboardButton("🟢 Ингосстрах", callback_data="set_ingo")
     markup.add(btn_alfa, btn_ingo)
-    
     bot.send_message(message.chat.id, "👋 Привет! Выбери страховую компанию:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('set_'))
 def callback_set_insurer(call):
     insurer_key = call.data.replace('set_', '')
     user_choices[call.from_user.id] = insurer_key
-    
     insurer_name = "АльфаСтрахование" if insurer_key == "alfa" else "Ингосстрах"
     bot.answer_callback_query(call.id)
-    bot.edit_message_text(
-        chat_id=call.message.chat.id, 
-        message_id=call.message.message_id,
-        text=f"✅ Выбрано: *{insurer_name}*.\n\nТеперь пришли мне JSON с данными для полиса.",
-        parse_mode='Markdown'
-    )
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                          text=f"✅ Выбрано: *{insurer_name}*.\n\nТеперь пришли мне JSON с данными для полиса.", parse_mode='Markdown')
 
 @bot.message_handler(content_types=['text'])
 def handle_json(message):
     insurer_key = user_choices.get(message.from_user.id, "alfa")
     insurer_name = "АльфаСтрахование" if insurer_key == "alfa" else "Ингосстрах"
-    
     raw_text = message.text.strip().replace("```json", "").replace("```", "").strip()
-    
     if not raw_text.startswith("{"):
         bot.reply_to(message, f"Ты выбрал: {insurer_name}. Отправь JSON с данными.")
         return
-
     try: data = json.loads(raw_text)
     except json.JSONDecodeError:
         bot.reply_to(message, "❌ Ошибка: это не похоже на JSON.")
@@ -661,7 +651,6 @@ def handle_json(message):
         data["trailer_new_x"] = ""
 
     drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
-
     try:
         if insurer_key == "alfa":
             if drivers:
@@ -676,7 +665,6 @@ def handle_json(message):
 
         owner = data.get("owner_fio", "Полис_ОСАГО").strip()
         safe_name = "".join([c for c in owner if c not in r'\/:*?"<>|']).strip() or "Полис_ОСАГО"
-        
         pdf_file = io.BytesIO(pdf_data)
         pdf_file.name = f"{safe_name}.pdf"
         bot.send_document(message.chat.id, pdf_file)
