@@ -40,7 +40,7 @@ def is_inside(inner, outer):
     r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
     return (r.x0 >= o.x0 - 0.5 and r.y0 >= o.y0 - 0.5 and r.x1 <= o.x1 + 0.5 and r.y1 <= o.y1 + 0.5)
 
-# ОПТИМИЗАЦИЯ: Теперь мы просто фильтруем готовый список спанов, а не парсим страницу заново
+# ОПТИМИЗАЦИЯ: фильтруем готовый список спанов, а не парсим страницу заново
 def get_all_spans(page):
     out = []
     for b in page.get_text("dict").get("blocks", []):
@@ -58,8 +58,14 @@ def collect_spans(all_spans, area):
             out.append(sp)
     return out
 
+def font_obj_by_name(fname):
+    if fname == "thmb": return THM_BD_OBJ
+    if fname == "thm": return THM_OBJ
+    if fname == "tnewb": return FONT_BLD_OBJ
+    return FONT_REG_OBJ
+
 # =========================================================================
-# АЛЬФА
+# АЛЬФА (НЕ ТРОНУТА)
 # =========================================================================
 FIELDS_ALFA = {
     "policyholder_fio":        (1, [16.0, 306.65, 230.53, 318.83], "reg",  11),
@@ -157,12 +163,12 @@ def fill_alfa_pdf(data):
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
-        all_spans = get_all_spans(page) # <--- ОДИН РАЗ СКАНИРУЕМ
+        all_spans = get_all_spans(page)
         centers = label_centers(page)
         to_delete, inserts = [], []
         for (rect, val, fkey, size, key) in items:
             rect = snap_rect(rect, key, centers)
-            spans = collect_spans(all_spans, rect) # <--- БЫСТРАЯ ФИЛЬТРАЦИЯ
+            spans = collect_spans(all_spans, rect)
             if key == "trailer_old_x" and not spans: continue
             if spans:
                 for sp in spans: to_delete.append(sp["bbox"])
@@ -271,13 +277,13 @@ def fill_alfa_limited_pdf(data):
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
-        all_spans = get_all_spans(page) # <--- ОДИН РАЗ СКАНИРУЕМ
+        all_spans = get_all_spans(page)
         centers = label_centers(page)
         to_delete, inserts = [], []
         for (rect, val, fkey, size, key) in items:
             rect = snap_rect(rect, key, centers)
             r = pymupdf.Rect(rect)
-            spans = collect_spans(all_spans, r) # <--- БЫСТРАЯ ФИЛЬТРАЦИЯ
+            spans = collect_spans(all_spans, r)
             if key in ["trailer_old_x", "unlimited_checkbox", "limited_checkbox"]:
                 if spans:
                     for sp in spans: to_delete.append(sp["bbox"])
@@ -366,6 +372,12 @@ FIELDS_INGOS = {
 }
 CENTER_FIELDS_INGOS = {"marka", "model", "gosnomer", "policy_number_str", "premium_str", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"}
 
+# Таблица водителей Ингос: строки и центры колонок (из скана бланка).
+# Если ФИО/права съедут вбок — правь только числа центров ниже.
+INGOS_DRIVER_ROWS = [(483.44, 495.51), (496.01, 508.08), (508.58, 520.65),
+                     (521.15, 533.22), (533.72, 545.79)]
+INGOS_DRIVER_COLS = {"fio": (220.0, 350.0), "license": (445.7, 88.0), "kbm": (537.8, 60.0)}
+
 def get_font_name(font_str):
     if "Tahoma" in font_str:
         return "thmb" if "Bold" in font_str or "Bd" in font_str else "thm"
@@ -394,12 +406,15 @@ def ingos_vin_cells(page):
 
 def fill_ingos_pdf(data):
     doc = pymupdf.open("template_ingos.pdf")
-    today = datetime.date.today()
+
+    # ВСЁ время считаем по Москве (иначе ночью даты разъезжаются на день)
+    msk_now = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
+    today = msk_now.date()
+
     try: next_year = today.replace(year=today.year + 1)
     except ValueError: next_year = today.replace(year=today.year + 1, day=28)
     end_date = next_year - datetime.timedelta(days=1)
 
-    msk_now = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
     months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
     month_name = months[msk_now.month - 1]
 
@@ -415,14 +430,16 @@ def fill_ingos_pdf(data):
     else:
         formatted_total = total_rub
 
-    data["premium_str"] = f"{total_rub} руб. {total_kop} коп."
-    
+    if total_rub:
+        data["premium_str"] = f"{total_rub} руб. {total_kop} коп."
+
+    # НОМЕР ПОЛИСА: пусто в JSON -> НЕ трогаем то, что в шаблоне
     series = str(data.get('policy_series', '')).strip()
     number = str(data.get('policy_number', '')).strip()
     if series or number:
         data["policy_number_str"] = f"№  {series} {number}".strip()
     else:
-        data["policy_number_str"] = "№  ХХХ 0604558947"
+        data.pop("policy_number_str", None)
 
     vin_val = "".join(str(data.get("vin", "")).split()).upper()
     data.pop("vin", None)
@@ -453,13 +470,11 @@ def fill_ingos_pdf(data):
     except: data["premium_total"] = formatted_total
 
     all_fields = dict(FIELDS_INGOS)
-    driver_rows = [(483.44, 495.51), (496.01, 508.08), (508.58, 520.65), (521.15, 533.22), (533.72, 545.79)]
     if drivers:
         for i, d in enumerate(drivers[:5]):
-            y0, y1 = driver_rows[i]
-            all_fields[f"driver{i+1}_fio"] = (1, [60.0, y0, 425.0, y1])
-            all_fields[f"driver{i+1}_license"] = (1, [430.0, y0, 520.0, y1])
-            all_fields[f"driver{i+1}_kbm"] = (1, [525.0, y0, 560.0, y1])
+            y0, y1 = INGOS_DRIVER_ROWS[i]
+            for col, (cx, w) in INGOS_DRIVER_COLS.items():
+                all_fields[f"driver{i+1}_{col}"] = (1, [cx - w / 2, y0, cx + w / 2, y1])
             data[f"driver{i+1}_fio"] = d.get("fio", "")
             data[f"driver{i+1}_license"] = d.get("license", "")
             try: data[f"driver{i+1}_kbm"] = f"{float(d.get('kbm', '1.00')):.2f}"
@@ -472,29 +487,32 @@ def fill_ingos_pdf(data):
         if key in DECIMAL_FIELDS:
             try: val = f"{float(val):.2f}"
             except ValueError: pass
+        if key in ["policy_number_str", "premium_str"] and not val: continue
         by_page.setdefault(pno, []).append((rect, val, key))
 
     for pno, items in by_page.items():
         page = doc[pno - 1]
-        all_spans = get_all_spans(page) # <--- ОДИН РАЗ СКАНИРУЕМ
+        all_spans = get_all_spans(page)
         to_delete, inserts, vin_inserts = [], [], []
 
         if pno == 1 and vin_val:
             VIN_RECT = [186, 318, 440, 340]
-            vspans = collect_spans(all_spans, VIN_RECT) # <--- БЫСТРАЯ ФИЛЬТРАЦИЯ
+            vspans = collect_spans(all_spans, VIN_RECT)
             for sp in vspans: to_delete.append(sp["bbox"])
-            
+
             cells = ingos_vin_cells(page)
             vfont, vsize, vcolor = "thmb", 11, (0,0,0)
             if vspans:
                 vfont = get_font_name(vspans[0]["font"])
                 vsize = vspans[0]["size"]
                 vcolor = int_to_rgb(vspans[0]["color"])
-            
+            v_obj = font_obj_by_name(vfont)
+
             if len(cells) >= 17:
                 for i, ch in enumerate(vin_val):
+                    if i >= len(cells): break
                     cell = cells[i]
-                    w = THM_BD_OBJ.text_length(ch, fontsize=vsize)
+                    w = v_obj.text_length(ch, fontsize=vsize)
                     x = cell.x0 + (cell.width - w) / 2
                     y = cell.y1 - 3.5
                     vin_inserts.append((x, y, ch, vfont, vsize, vcolor))
@@ -517,17 +535,17 @@ def fill_ingos_pdf(data):
                     centers = [c0 + i * p for i in range(17)]
                 for i, ch in enumerate(vin_val):
                     if i < len(centers):
-                        w = THM_BD_OBJ.text_length(ch, fontsize=vsize)
+                        w = v_obj.text_length(ch, fontsize=vsize)
                         vin_inserts.append((centers[i] - w / 2, 332.5, ch, vfont, vsize, vcolor))
 
         for (rect, val, key) in items:
             r = pymupdf.Rect(rect)
-            spans = collect_spans(all_spans, r) # <--- БЫСТРАЯ ФИЛЬТРАЦИЯ
-            
+            spans = collect_spans(all_spans, r)
+
             fname = "thm"
             fsize = 10
             fcolor = (0,0,0)
-            
+
             if spans:
                 if key in ["policy_number_str", "premium_str"]:
                     spans_sorted = sorted(spans, key=lambda s: s["bbox"][0])
@@ -540,9 +558,9 @@ def fill_ingos_pdf(data):
                     fname = get_font_name(spans[0]["font"])
                     fsize = spans[0]["size"]
                     fcolor = int_to_rgb(spans[0]["color"])
-                
+
                 for sp in spans: to_delete.append(sp["bbox"])
-            
+
             is_center = (key in CENTER_FIELDS_INGOS) or key.startswith("driver")
             inserts.append((r, val, fname, fsize, is_center, fcolor))
 
@@ -552,6 +570,8 @@ def fill_ingos_pdf(data):
 
         page.insert_font(fontname="thm", fontbuffer=THM_BUF)
         page.insert_font(fontname="thmb", fontbuffer=THM_BD_BUF)
+        page.insert_font(fontname="tnew", fontbuffer=REG_BUF)
+        page.insert_font(fontname="tnewb", fontbuffer=BLD_BUF)
 
         for x, b, ch, fnt, sz, col in vin_inserts:
             page.insert_text((x, b), ch, fontname=fnt, fontsize=sz, color=col)
@@ -559,15 +579,15 @@ def fill_ingos_pdf(data):
         for item in inserts:
             r, val, fname, size, is_center, color = item
             if not val: continue
-            f_obj = THM_BD_OBJ if fname == "thmb" else THM_OBJ
+            f_obj = font_obj_by_name(fname)
             text_w = f_obj.text_length(val, fontsize=size)
-            
+
             if is_center:
                 x_new = r.x0 + (r.width - text_w) / 2
                 if text_w >= r.width: x_new = r.x0
             else:
                 x_new = r.x0
-                
+
             baseline = r.y1 - 0.22 * size
             page.insert_text((x_new, baseline), val, fontname=fname, fontsize=size, color=color)
 
@@ -600,58 +620,6 @@ def handle_company_choice(message):
 def handle_json(message):
     if message.text in ["🔴 АльфаСтрахование", "🔵 Ингосстрах"]:
         return
-        
+
     insurer_key = user_choices.get(message.from_user.id, "alfa")
-    insurer_name = "АльфаСтрахование" if insurer_key == "alfa" else "Ингосстрах"
-    raw_text = message.text.strip().replace("```json", "").replace("```", "").strip()
-    
-    if not raw_text.startswith("{"):
-        bot.reply_to(message, f"Ты выбрал: {insurer_name}. Отправь JSON с данными.")
-        return
-        
-    try: data = json.loads(raw_text)
-    except json.JSONDecodeError:
-        bot.reply_to(message, "❌ Ошибка: это не похоже на JSON.")
-        return
-
-    if data.get("trailer", "").lower() == "нет":
-        data["trailer_old_x"] = ""
-        data["trailer_new_x"] = "Х"
-    else:
-        data["trailer_old_x"] = "Х"
-        data["trailer_new_x"] = ""
-
-    drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
-    try:
-        if insurer_key == "alfa":
-            if drivers:
-                bot.reply_to(message, f"📄 {insurer_name}. Водителей: {len(drivers)}. Тип: Ограниченный. ⏳ Генерирую...")
-                pdf_data = fill_alfa_limited_pdf(data)
-            else:
-                bot.reply_to(message, f"📄 {insurer_name}. Водителей: 0. Тип: Неограниченный. ⏳ Генерирую...")
-                pdf_data = fill_alfa_pdf(data)
-        else:
-            bot.reply_to(message, f"📄 {insurer_name}. ⏳ Генерирую...")
-            pdf_data = fill_ingos_pdf(data)
-
-        owner = data.get("owner_fio", "Полис_ОСАГО").strip()
-        safe_name = "".join([c for c in owner if c not in r'\/:*?"<>|']).strip() or "Полис_ОСАГО"
-        pdf_file = io.BytesIO(pdf_data)
-        pdf_file.name = f"{safe_name}.pdf"
-        bot.send_document(message.chat.id, pdf_file)
-    except Exception as e:
-        traceback.print_exc()
-        bot.reply_to(message, f"❌ Ошибка: {e}")
-
-@app.route('/')
-def home():
-    return "Bot is running!"
-
-def run_bot():
-    print("Бот запущен и ждет сообщений...")
-    bot.polling(none_stop=True)
-
-if __name__ == '__main__':
-    threading.Thread(target=run_bot, daemon=True).start()
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    insurer_name = "АльфаСтрахование"
