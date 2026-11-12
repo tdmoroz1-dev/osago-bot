@@ -1,7 +1,7 @@
 import telebot
 from telebot import types
 import pymupdf
-import os, datetime, json, io, gc, traceback, time
+import os, datetime, json, io, gc, traceback, time, random
 from flask import Flask
 import threading
 
@@ -755,27 +755,29 @@ def fill_rgs_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# РЕСО-ГАРАНТИЯ (НОВОЕ) — координаты из reso_full.txt
+# РЕСО-ГАРАНТИЯ — координаты из reso_full.txt
 # =========================================================================
 RESO_MARKA_CENTER = False    # True = центрировать марку/модель
 RESO_GOS_CENTER   = False    # True = центрировать госномер
 RESO_MARKA_CX     = 146.0
 RESO_GOS_CX       = 496.0
 
-RESO_TRAILER_YES_CX = 420.70   # клетка "да" (вычислена по шаблону)
-RESO_TRAILER_NO_CX  = 498.40   # клетка "нет" (снята с V в образце)
-RESO_TYPE_UNL_CX    = 202.03   # галочка "неограниченного"
-RESO_TYPE_LIM_CX    = 422.25   # галочка "лиц, допущенных"
+RESO_TRAILER_YES_CX = 420.70
+RESO_TRAILER_NO_CX  = 498.40
+RESO_TYPE_UNL_CX    = 202.03
+RESO_TYPE_LIM_CX    = 422.25
 
 RESO_LABELS = {"tb":"ТБ","kt":"КТ","kbm":"КБМ","kvs":"КВС","ko":"КО","ks":"КС","kp":"КП","km":"КМ"}
 RESO_LABEL_FALLBACK = {"tb":118.93,"kt":184.62,"kbm":230.99,"kvs":273.32,"ko":313.79,"ks":356.42,"kp":399.31,"km":442.61}
 
-# ВНИМАНИЕ: в этом бланке таблица водителей пустая и сжатая — место на 1 строку.
-# Нужен образец РЕСО с водителями, чтобы прописать остальные строки.
+# Таблица водителей: в этом бланке место на 1 строку
 RESO_DRIVER_ROWS = [(457.5, 470.5)]
-RESO_DRIVER_FIO_X = 40.75
-RESO_DRIVER_VU_CX = 436.49
+RESO_DRIVER_NUM_CX = 21.93     # центр колонки "№ п/п" — цифра ровно под заголовком
+RESO_DRIVER_FIO_X  = 40.75
+RESO_DRIVER_VU_CX  = 436.49
 RESO_DRIVER_KBM_CX = 517.98
+RESO_DRIVER_FONT   = "arbd"    # шрифт/размер ФИО водителя — номер строки такой же
+RESO_DRIVER_SIZE   = 10.0
 
 def reso_font_name(font_str):
     f = str(font_str).lower()
@@ -796,6 +798,13 @@ def reso_label_centers(page):
 def reso_coef(val):
     try: return f"{float(str(val).replace(',', '.')):.2f}"
     except Exception: return str(val).strip()
+
+def reso_doc_number(fio):
+    """8 цифр в скобки после ФИО. Одинаковое ФИО -> одинаковый номер,
+       разное ФИО -> разный. Номер постоянен для одного человека."""
+    key = " ".join(str(fio).upper().split())
+    if not key: return ""
+    return str(random.Random(key).randint(10000000, 99999999))
 
 def fill_reso_pdf(data):
     doc = pymupdf.open("template_reso.pdf")
@@ -867,21 +876,23 @@ def fill_reso_pdf(data):
     put([483, 132.5, 560, 147.2], f"{today.strftime('%d.%m.%Y')} г.", max_w=76)
     put([483, 149.5, 560, 164.0], f"{end_date.strftime('%d.%m.%Y')} г.", max_w=76)
 
-    # 4. Период использования (1-й период; пустые периоды справа не трогаем)
+    # 4. Период использования (1-й период)
     put([340, 166.8, 392, 176.7], f"{today.strftime('%d.%m.%Y')} г.", max_w=51)
     put([345.3, 176.0, 397, 185.9], f"{end_date.strftime('%d.%m.%Y')} г.", max_w=51)
 
-    # 5. Страхователь: ФИО + стираем паспорт в скобках
-    put([110, 200.7, 348.9, 215.1], data.get("policyholder_fio", ""), max_w=236)
-    erase([348.5, 200.7, 415, 215.1])
-
-    # 6. Собственник: ФИО + стираем паспорт в скобках
-    put([110, 231.6, 348.9, 246.0], data.get("owner_fio", ""), max_w=236)
-    erase([348.5, 231.6, 415, 246.0])
+    # 5-6. Страхователь и собственник: ФИО + номер в скобках
+    ph_fio = str(data.get("policyholder_fio", "")).strip()
+    ow_fio = str(data.get("owner_fio", "")).strip()
+    ph_num = str(data.get("policyholder_passport", "")).strip() or reso_doc_number(ph_fio)
+    ow_num = str(data.get("owner_passport", "")).strip() or reso_doc_number(ow_fio)
+    put([110, 200.7, 348.9, 215.1], ph_fio, max_w=236)
+    put([348.5, 200.7, 415, 215.1], f"[{ph_num}]" if ph_num else "", max_w=64)
+    put([110, 231.6, 348.9, 246.0], ow_fio, max_w=236)
+    put([348.5, 231.6, 415, 246.0], f"[{ow_num}]" if ow_num else "", max_w=64)
 
     # 7. Прицеп
     tr_spans = collect_spans(all_spans, [490, 251.5, 510, 264.0])
-    tr_base = 428.15
+    tr_base = 261.27
     if tr_spans:
         s0 = tr_spans[0]
         tr_base = s0["origin"][1] if "origin" in s0 else s0["bbox"][3] - 2.1
@@ -900,7 +911,7 @@ def fill_reso_pdf(data):
     else:
         put([20, 293.0, 275, 307.5], mm, max_w=250)
 
-    # 9. VIN — сплошной строкой (клеток в бланке нет)
+    # 9. VIN — сплошной строкой
     vin_val = "".join(str(data.get("vin", "")).split()).upper()
     put([281, 294.5, 434, 309.0], vin_val, max_w=150)
 
@@ -910,7 +921,7 @@ def fill_reso_pdf(data):
     else:
         put([440, 294.5, 560, 309.0], data.get("gosnomer", ""), max_w=110)
 
-    # 11. Документ: вид / серия (слева) + номер (справа) / стираем 2-ю строку
+    # 11. Документ: вид / серия слева + номер справа / стираем 2-ю строку
     put([210, 329.6, 260, 344.1], str(data.get("doc_type", "ПТС")).strip(), max_w=45)
     sr_spans = collect_spans(all_spans, [388, 329.6, 540, 344.1])
     for s in sr_spans: to_delete.append(s["bbox"])
@@ -925,16 +936,15 @@ def fill_reso_pdf(data):
     s_ser = str(data.get("pts_series", "")).strip()
     s_num = str(data.get("pts_number", "")).strip()
     if s_ser:
-        w = ARBD_OBJ.text_length(s_ser, fontsize=sr_size)
         inserts.append((sr_x, sr_base, s_ser, "arbd", sr_size, sr_col))
     if s_num:
         w = ARBD_OBJ.text_length(s_num, fontsize=sr_size)
         inserts.append((sr_right - w, sr_base, s_num, "arbd", sr_size, sr_col))
     erase([388, 344.2, 470, 358.5])   # 'MJ00122434' — непонятная 2-я строка
 
-    # 12. Цель использования — V у "личная" уже в бланке, не трогаем
+    # 12. Цель использования — V у "личная" уже в бланке
 
-    # 13. Тип полиса: две колонки, галочка слева от текста
+    # 13. Тип полиса
     ty_spans = collect_spans(all_spans, [194, 416.5, 212, 431.2])
     ty_base = 428.15
     if ty_spans:
@@ -947,19 +957,26 @@ def fill_reso_pdf(data):
     else:
         mark(RESO_TYPE_UNL_CX, ty_base, "V", 12.0)
 
-    # 14. Таблица водителей (в этом бланке место только на 1 строку!)
+    # 14. Таблица водителей: № строки + ФИО + ВУ + КБМ
     if limited:
         for i, d in enumerate(drivers[:len(RESO_DRIVER_ROWS)]):
             y0, y1 = RESO_DRIVER_ROWS[i]
             try: kb = f"{float(d.get('kbm', '1.00')):.2f}"
             except Exception: kb = "1.00"
-            put([RESO_DRIVER_FIO_X, y0, 290.0, y1], d.get("fio", ""), max_w=248, font="arbd", size=10.0)
+            # цифра строки — под заголовком "№ п/п", шрифт/размер как у ФИО
+            put([RESO_DRIVER_NUM_CX - 8, y0, RESO_DRIVER_NUM_CX + 8, y1], str(i + 1),
+                align="center", cx=RESO_DRIVER_NUM_CX, max_w=16,
+                font=RESO_DRIVER_FONT, size=RESO_DRIVER_SIZE)
+            put([RESO_DRIVER_FIO_X, y0, 290.0, y1], d.get("fio", ""), max_w=248,
+                font=RESO_DRIVER_FONT, size=RESO_DRIVER_SIZE)
             put([RESO_DRIVER_VU_CX - 42, y0, RESO_DRIVER_VU_CX + 42, y1], d.get("license", ""),
-                align="center", cx=RESO_DRIVER_VU_CX, max_w=82, font="arbd", size=10.0)
+                align="center", cx=RESO_DRIVER_VU_CX, max_w=82,
+                font=RESO_DRIVER_FONT, size=RESO_DRIVER_SIZE)
             put([RESO_DRIVER_KBM_CX - 26, y0, RESO_DRIVER_KBM_CX + 26, y1], kb,
-                align="center", cx=RESO_DRIVER_KBM_CX, max_w=50, font="arbd", size=10.0)
+                align="center", cx=RESO_DRIVER_KBM_CX, max_w=50,
+                font=RESO_DRIVER_FONT, size=RESO_DRIVER_SIZE)
 
-    # 15. Коэффициенты (центрируем под подписями ТБ/КТ/...)
+    # 15. Коэффициенты
     centers = reso_label_centers(page)
     for key, lab in RESO_LABELS.items():
         cx = centers.get(lab, RESO_LABEL_FALLBACK[key])
@@ -970,20 +987,20 @@ def fill_reso_pdf(data):
         if not val: continue
         put([cx - 22, 583.9, cx + 22, 593.9], val, align="center", cx=cx, max_w=44)
 
-    # 16. Итого — БЕЗ пробела в тысячах, размер 12
+    # 16. Итого — БЕЗ пробела в тысячах
     if rub:
         put([480, 575.5, 545, 590.0], f"{rub}.{kop}", max_w=62)
 
-    # 17. Дата заключения договора (день + месяц словом + год)
+    # 17. Дата заключения договора
     put([119, 657.6, 250, 672.1], f"{today.day} {MONTHS_RU[today.month-1]} {today.year} г.", max_w=200)
 
     # 18. Страхователь внизу (подпись)
-    put([18, 692.5, 230, 704.8], data.get("policyholder_fio", ""), max_w=210)
+    put([18, 692.5, 230, 704.8], ph_fio, max_w=210)
 
     # 19. Дата выдачи полиса
     put([81, 734.9, 145, 742.5], f"{today.day} {MONTHS_RU[today.month-1]} {today.year} г.", max_w=63)
 
-    # 20. Штрих-код, телефон агента, данные представителя — НЕ ТРОГАЕМ
+    # 20. Штрих-код, телефон агента, представитель — НЕ ТРОГАЕМ
 
     # ===== ИСПОЛНЕНИЕ =====
     for t in tasks:
