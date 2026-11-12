@@ -605,12 +605,11 @@ def fill_ingos_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# РОСГОССТРАХ (НОВОЕ) — координаты из rgs_full.txt + rgs_cells.txt
+# РОСГОССТРАХ — координаты из rgs_full.txt + rgs_cells.txt
 # =========================================================================
 MONTHS_RU = ["января","февраля","марта","апреля","мая","июня",
              "июля","августа","сентября","октября","ноября","декабря"]
 
-# Клетки срока страхования (в каждой 2 цифры)
 RGS_TERM = {
     "sd": [442.32, 129.68, 469.68, 143.36],
     "sm": [479.28, 129.68, 506.64, 143.36],
@@ -619,7 +618,6 @@ RGS_TERM = {
     "em": [479.28, 142.40, 506.64, 156.08],
     "ey": [531.36, 142.40, 558.72, 156.08],
 }
-# Клетки 1-го периода использования (остальные периоды - прочерки, не трогаем)
 RGS_PERIOD = {
     "sd": [32.16, 189.20, 59.52, 202.88],
     "sm": [66.48, 189.20, 93.84, 202.88],
@@ -632,18 +630,21 @@ RGS_PERIOD = {
 RGS_TRAILER_YES = [266.16, 318.80, 279.60, 332.00]
 RGS_TRAILER_NO  = [303.84, 318.80, 317.04, 332.00]
 RGS_TYPE_BOX    = [413.04, 456.56, 458.88, 484.40]
-RGS_TYPE_DX     = 435.46   # центр галочки типа полиса
-RGS_TYPE_BASE   = 466.74   # базовая линия 1-й строки
-RGS_TYPE_STEP   = 11.28    # шаг между строками
+RGS_TYPE_DX     = 435.46
+RGS_TYPE_BASE   = 466.74
+RGS_TYPE_STEP   = 11.28
 
 RGS_VIN_RECT = [200.0, 355.0, 440.0, 375.0]
+
+# Центры колонок марки/модели и госномера (по заголовкам бланка)
+RGS_MARKA_CX = 107.49
+RGS_GOS_CX   = 508.19
 
 RGS_LABELS = {"tb":"ТБ","kt":"КТ","kbm":"КБМ","kvs":"КВС","ko":"КО",
               "ks":"КС","kp":"КП","km":"КМ","premium_total":"Итого"}
 RGS_LABEL_FALLBACK = {"tb":49.8,"kt":108.0,"kbm":162.0,"kvs":216.0,"ko":265.6,
                       "ks":315.0,"kp":367.2,"km":439.1,"premium_total":527.9}
 
-# 4 строки водителей: рамки колонок + точки привязки (по прочеркам бланка)
 RGS_DRIVER_ROWS = [
     {"num":[22.0,506.5,30.0,519.5], "fio":[50.0,506.5,310.0,519.5],
      "vu":[385.0,506.5,468.0,519.5], "kbm":[505.0,507.0,548.0,520.0],
@@ -716,7 +717,6 @@ def fill_rgs_pdf(data):
                       "align": align, "cx": cx, "max_w": max_w})
 
     def put_digits(rect, digits):
-        """Заменяет цифры в клетке, сохраняя их точные места."""
         sps = [s for s in collect_spans(all_spans, rect) if s["text"].strip().isdigit()]
         sps.sort(key=lambda s: s["bbox"][0])
         for s in sps: to_delete.append(s["bbox"])
@@ -730,7 +730,6 @@ def fill_rgs_pdf(data):
             inserts.append(((x0 + x1) / 2 - w / 2, base, ch, fn, fs, fc))
 
     def put_mark(box, symbol):
-        """Ставит галочку в центр нарисованной клетки."""
         r = pymupdf.Rect(box)
         for s in collect_spans(all_spans, r): to_delete.append(s["bbox"])
         if not symbol: return
@@ -738,7 +737,7 @@ def fill_rgs_pdf(data):
         w = ARBD_OBJ.text_length(symbol, fontsize=fs)
         inserts.append(((r.x0 + r.x1) / 2 - w / 2, r.y1 - 2.3, symbol, "arbd", fs, (0,0,0)))
 
-    # 1. Премия сверху (центр 513.63 = центр подписи "Страховая премия")
+    # 1. Премия сверху
     if rub:
         put([460, 29.0, 567, 38.5], f"{rub} руб. {kop} коп.", align="center", cx=513.63, max_w=104)
 
@@ -773,14 +772,14 @@ def fill_rgs_pdf(data):
     put_mark(RGS_TRAILER_YES, "V" if trailer_yes else "")
     put_mark(RGS_TRAILER_NO, "" if trailer_yes else "V")
 
-    # 7. Марка + модель ОДНОЙ строкой
+    # 7. Марка + модель ОДНОЙ строкой — ПО ЦЕНТРУ колонки
     mm = f"{str(data.get('marka','')).strip()} {str(data.get('model','')).strip()}".strip()
-    put([22, 348.5, 195, 366.0], mm, max_w=170)
+    put([22, 348.5, 195, 366.0], mm, align="center", cx=RGS_MARKA_CX, max_w=170)
 
-    # 8. Госномер
-    put([448, 355.5, 570, 370.0], data.get("gosnomer", ""), max_w=120)
+    # 8. Госномер — ПО ЦЕНТРУ колонки
+    put([448, 355.5, 570, 370.0], data.get("gosnomer", ""), align="center", cx=RGS_GOS_CX, max_w=120)
 
-    # 9. VIN — равномерная сетка по краям образца (клеток в бланке нет)
+    # 9. VIN — равномерная сетка по краям образца
     vin_val = "".join(str(data.get("vin", "")).split()).upper()
     if vin_val:
         vs = collect_spans(all_spans, RGS_VIN_RECT)
@@ -808,7 +807,7 @@ def fill_rgs_pdf(data):
     put([366, 390.7, 410, 400.7], data.get("pts_series", ""), max_w=42)
     put([441, 391.3, 500, 400.4], data.get("pts_number", ""), max_w=57)
 
-    # 11. Цель использования — в бланке уже стоит V у "личная", не трогаем
+    # 11. Цель использования — V у "личная" уже в бланке, не трогаем
 
     # 12. Тип полиса — галочка X в нужной строке
     tmarks = collect_spans(all_spans, RGS_TYPE_BOX)
@@ -818,14 +817,13 @@ def fill_rgs_pdf(data):
         s0 = tmarks[0]
         tdx = (s0["bbox"][0] + s0["bbox"][2]) / 2
         tbase = s0["origin"][1] if "origin" in s0 else s0["bbox"][3] - 2.1
+    w = ARBD_OBJ.text_length("X", fontsize=10.0)
     if not limited:
-        w = ARBD_OBJ.text_length("X", fontsize=10.0)
         inserts.append((tdx - w / 2, tbase, "X", "arbd", 10.0, (0,0,0)))
     else:
-        w = ARBD_OBJ.text_length("X", fontsize=10.0)
         inserts.append((tdx - w / 2, tbase + RGS_TYPE_STEP, "X", "arbd", 10.0, (0,0,0)))
 
-    # 13. Таблица водителей (4 строки): прочерки -> данные
+    # 13. Таблица водителей (4 строки)
     if limited:
         for i, d in enumerate(drivers[:4]):
             row = RGS_DRIVER_ROWS[i]
@@ -836,7 +834,7 @@ def fill_rgs_pdf(data):
             put(row["vu"], d.get("license", ""), align="center", cx=row["vu_cx"], max_w=80)
             put(row["kbm"], kb, align="center", cx=row["kbm_cx"], max_w=40)
 
-    # 14. Коэффициенты + Итого (центры берём у подписей)
+    # 14. Коэффициенты + Итого
     centers = rgs_label_centers(page)
     for key, lab in RGS_LABELS.items():
         cx = centers.get(lab, RGS_LABEL_FALLBACK[key])
@@ -850,7 +848,7 @@ def fill_rgs_pdf(data):
         if not val: continue
         put([cx - half, 684.5, cx + half, 695.0], val, align="center", cx=cx, max_w=half * 2)
 
-    # 15. Даты внизу: день / месяц словом / последние 2 цифры года
+    # 15. Даты внизу
     mn = MONTHS_RU[today.month - 1]
     put([146, 752.5, 164, 765.0], str(today.day), align="center", cx=154.98, max_w=17)
     put([183, 751.5, 240, 765.0], mn, max_w=55)
@@ -858,8 +856,6 @@ def fill_rgs_pdf(data):
     put([145, 777.5, 163, 790.0], str(today.day), align="center", cx=154.02, max_w=17)
     put([188, 776.0, 245, 790.0], mn, max_w=55)
     put([266.5, 777.5, 283, 790.0], today.strftime("%y"), max_w=16)
-
-    # 16. Подпись, сертификат, страница 2 — НЕ ТРОГАЕМ
 
     # ===== ИСПОЛНЕНИЕ =====
     for t in tasks:
@@ -919,14 +915,14 @@ def fill_rgs_pdf(data):
 COMPANY_BUTTONS = {
     "🔴 АльфаСтрахование": ("alfa", "АльфаСтрахование"),
     "🔵 Ингосстрах": ("ingo", "Ингосстрах"),
-    "🟢 Росгосстрах": ("rgs", "Росгосстрах"),
+    "🔴 Росгосстрах": ("rgs", "Росгосстрах"),
 }
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     markup.add(types.KeyboardButton("🔴 АльфаСтрахование"), types.KeyboardButton("🔵 Ингосстрах"))
-    markup.add(types.KeyboardButton("🟢 Росгосстрах"))
+    markup.add(types.KeyboardButton("🔴 Росгосстрах"))
     bot.send_message(message.chat.id, "👋 Привет! Выбери страховую компанию на клавиатуре внизу:", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text in COMPANY_BUTTONS)
