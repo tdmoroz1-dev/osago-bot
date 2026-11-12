@@ -372,11 +372,16 @@ FIELDS_INGOS = {
 }
 CENTER_FIELDS_INGOS = {"marka", "model", "gosnomer", "policy_number_str", "premium_str", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"}
 
-# Таблица водителей Ингос: строки и центры колонок (из скана бланка).
-# Если ФИО/права съедут вбок — правь только числа центров ниже.
-INGOS_DRIVER_ROWS = [(483.44, 495.51), (496.01, 508.08), (508.58, 520.65),
-                     (521.15, 533.22), (533.72, 545.79)]
-INGOS_DRIVER_COLS = {"fio": (220.0, 350.0), "license": (445.7, 88.0), "kbm": (537.8, 60.0)}
+# ТАБЛИЦА ВОДИТЕЛЕЙ ИНГОС — координаты сняты со звёздочек бланка.
+# Строка: (y0, y1, x_начала_ФИО, центр_ВУ, центр_КБМ)
+# ФИО пишется СЛЕВА от x_начала_ФИО, ВУ и КБМ — ПО ЦЕНТРУ звёзд.
+INGOS_DRIVER_ROWS = [
+    (483.44, 495.51, 61.98, 446.09, 539.14),
+    (496.01, 508.08, 61.98, 446.12, 539.34),
+    (508.58, 520.65, 61.98, 446.78, 539.66),
+    (521.15, 533.22, 62.48, 447.04, 540.08),
+    (533.72, 545.79, 62.48, 447.33, 540.08),
+]
 
 def get_font_name(font_str):
     if "Tahoma" in font_str:
@@ -407,7 +412,7 @@ def ingos_vin_cells(page):
 def fill_ingos_pdf(data):
     doc = pymupdf.open("template_ingos.pdf")
 
-    # ВСЁ время считаем по Москве (иначе ночью даты разъезжаются на день)
+    # Всё время считаем по Москве (иначе ночью даты разъезжаются на день)
     msk_now = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
     today = msk_now.date()
 
@@ -472,9 +477,12 @@ def fill_ingos_pdf(data):
     all_fields = dict(FIELDS_INGOS)
     if drivers:
         for i, d in enumerate(drivers[:5]):
-            y0, y1 = INGOS_DRIVER_ROWS[i]
-            for col, (cx, w) in INGOS_DRIVER_COLS.items():
-                all_fields[f"driver{i+1}_{col}"] = (1, [cx - w / 2, y0, cx + w / 2, y1])
+            y0, y1, fx, lcx, kcx = INGOS_DRIVER_ROWS[i]
+            # ФИО: рамка начинается там же, где звёзды -> текст пойдёт слева
+            all_fields[f"driver{i+1}_fio"]     = (1, [fx, y0, 400.0, y1])
+            # ВУ и КБМ: рамка симметрична относительно центра звёзд -> текст по центру
+            all_fields[f"driver{i+1}_license"] = (1, [lcx - 45.0, y0, lcx + 45.0, y1])
+            all_fields[f"driver{i+1}_kbm"]     = (1, [kcx - 30.0, y0, kcx + 30.0, y1])
             data[f"driver{i+1}_fio"] = d.get("fio", "")
             data[f"driver{i+1}_license"] = d.get("license", "")
             try: data[f"driver{i+1}_kbm"] = f"{float(d.get('kbm', '1.00')):.2f}"
@@ -561,7 +569,8 @@ def fill_ingos_pdf(data):
 
                 for sp in spans: to_delete.append(sp["bbox"])
 
-            is_center = (key in CENTER_FIELDS_INGOS) or key.startswith("driver")
+            # ФИО водителя — СЛЕВА, остальные поля водителя — по центру
+            is_center = (key in CENTER_FIELDS_INGOS) or (key.startswith("driver") and not key.endswith("_fio"))
             inserts.append((r, val, fname, fsize, is_center, fcolor))
 
         if to_delete:
@@ -622,4 +631,56 @@ def handle_json(message):
         return
 
     insurer_key = user_choices.get(message.from_user.id, "alfa")
-    insurer_name = "АльфаСтрахование"
+    insurer_name = "АльфаСтрахование" if insurer_key == "alfa" else "Ингосстрах"
+    raw_text = message.text.strip().replace("```json", "").replace("```", "").strip()
+
+    if not raw_text.startswith("{"):
+        bot.reply_to(message, f"Ты выбрал: {insurer_name}. Отправь JSON с данными.")
+        return
+
+    try: data = json.loads(raw_text)
+    except json.JSONDecodeError:
+        bot.reply_to(message, "❌ Ошибка: это не похоже на JSON.")
+        return
+
+    if data.get("trailer", "").lower() == "нет":
+        data["trailer_old_x"] = ""
+        data["trailer_new_x"] = "Х"
+    else:
+        data["trailer_old_x"] = "Х"
+        data["trailer_new_x"] = ""
+
+    drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
+    try:
+        if insurer_key == "alfa":
+            if drivers:
+                bot.reply_to(message, f"📄 {insurer_name}. Водителей: {len(drivers)}. Тип: Ограниченный. ⏳ Генерирую...")
+                pdf_data = fill_alfa_limited_pdf(data)
+            else:
+                bot.reply_to(message, f"📄 {insurer_name}. Водителей: 0. Тип: Неограниченный. ⏳ Генерирую...")
+                pdf_data = fill_alfa_pdf(data)
+        else:
+            bot.reply_to(message, f"📄 {insurer_name}. ⏳ Генерирую...")
+            pdf_data = fill_ingos_pdf(data)
+
+        owner = data.get("owner_fio", "Полис_ОСАГО").strip()
+        safe_name = "".join([c for c in owner if c not in r'\/:*?"<>|']).strip() or "Полис_ОСАГО"
+        pdf_file = io.BytesIO(pdf_data)
+        pdf_file.name = f"{safe_name}.pdf"
+        bot.send_document(message.chat.id, pdf_file)
+    except Exception as e:
+        traceback.print_exc()
+        bot.reply_to(message, f"❌ Ошибка: {e}")
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_bot():
+    print("Бот запущен и ждет сообщений...")
+    bot.polling(none_stop=True)
+
+if __name__ == '__main__':
+    threading.Thread(target=run_bot, daemon=True).start()
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
