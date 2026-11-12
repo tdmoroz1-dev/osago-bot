@@ -36,11 +36,18 @@ FONT_BLD_OBJ = pymupdf.Font(fontbuffer=BLD_BUF)
 THM_OBJ = pymupdf.Font(fontbuffer=THM_BUF)
 THM_BD_OBJ = pymupdf.Font(fontbuffer=THM_BD_BUF)
 
+# Arial для Росгосстраха (если файлов нет - падаем на Tahoma)
+AR_BUF = load_font(["arial.ttf", r"C:\Windows\Fonts\arial.ttf"]) or THM_BUF
+ARBD_BUF = load_font(["arialbd.ttf", r"C:\Windows\Fonts\arialbd.ttf"]) or THM_BD_BUF
+ARBI_BUF = load_font(["arialbi.ttf", r"C:\Windows\Fonts\arialbi.ttf"]) or ARBD_BUF
+AR_OBJ = pymupdf.Font(fontbuffer=AR_BUF)
+ARBD_OBJ = pymupdf.Font(fontbuffer=ARBD_BUF)
+ARBI_OBJ = pymupdf.Font(fontbuffer=ARBI_BUF)
+
 def is_inside(inner, outer):
     r, o = pymupdf.Rect(inner), pymupdf.Rect(outer)
     return (r.x0 >= o.x0 - 0.5 and r.y0 >= o.y0 - 0.5 and r.x1 <= o.x1 + 0.5 and r.y1 <= o.y1 + 0.5)
 
-# ОПТИМИЗАЦИЯ: фильтруем готовый список спанов, а не парсим страницу заново
 def get_all_spans(page):
     out = []
     for b in page.get_text("dict").get("blocks", []):
@@ -63,6 +70,9 @@ def font_obj_by_name(fname):
     if fname == "thm": return THM_OBJ
     if fname == "tnewb": return FONT_BLD_OBJ
     return FONT_REG_OBJ
+
+def int_to_rgb(c):
+    return ((c >> 16) & 255) / 255.0, ((c >> 8) & 255) / 255.0, (c & 255) / 255.0
 
 # =========================================================================
 # АЛЬФА (НЕ ТРОНУТА)
@@ -341,7 +351,7 @@ def fill_alfa_limited_pdf(data):
     return pdf_bytes
 
 # =========================================================================
-# ИНГОССТРАХ
+# ИНГОССТРАХ (НЕ ТРОНУТ)
 # =========================================================================
 FIELDS_INGOS = {
     "policyholder_fio":        (1, [25.0, 251.8, 500.0, 263.87]),
@@ -372,9 +382,6 @@ FIELDS_INGOS = {
 }
 CENTER_FIELDS_INGOS = {"marka", "model", "gosnomer", "policy_number_str", "premium_str", "tb", "kt", "kbm", "kvs", "ko", "ks", "kp", "km", "premium_total"}
 
-# ТАБЛИЦА ВОДИТЕЛЕЙ ИНГОС — координаты сняты со звёздочек бланка.
-# Строка: (y0, y1, x_начала_ФИО, центр_ВУ, центр_КБМ)
-# ФИО пишется СЛЕВА от x_начала_ФИО, ВУ и КБМ — ПО ЦЕНТРУ звёзд.
 INGOS_DRIVER_ROWS = [
     (483.44, 495.51, 61.98, 446.09, 539.14),
     (496.01, 508.08, 61.98, 446.12, 539.34),
@@ -389,9 +396,6 @@ def get_font_name(font_str):
     if "Times" in font_str:
         return "tnewb" if "Bold" in font_str else "tnew"
     return "thm"
-
-def int_to_rgb(c):
-    return ((c >> 16) & 255) / 255.0, ((c >> 8) & 255) / 255.0, (c & 255) / 255.0
 
 def ingos_vin_cells(page):
     cells = []
@@ -412,7 +416,6 @@ def ingos_vin_cells(page):
 def fill_ingos_pdf(data):
     doc = pymupdf.open("template_ingos.pdf")
 
-    # Всё время считаем по Москве (иначе ночью даты разъезжаются на день)
     msk_now = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
     today = msk_now.date()
 
@@ -438,7 +441,6 @@ def fill_ingos_pdf(data):
     if total_rub:
         data["premium_str"] = f"{total_rub} руб. {total_kop} коп."
 
-    # НОМЕР ПОЛИСА: пусто в JSON -> НЕ трогаем то, что в шаблоне
     series = str(data.get('policy_series', '')).strip()
     number = str(data.get('policy_number', '')).strip()
     if series or number:
@@ -478,9 +480,7 @@ def fill_ingos_pdf(data):
     if drivers:
         for i, d in enumerate(drivers[:5]):
             y0, y1, fx, lcx, kcx = INGOS_DRIVER_ROWS[i]
-            # ФИО: рамка начинается там же, где звёзды -> текст пойдёт слева
             all_fields[f"driver{i+1}_fio"]     = (1, [fx, y0, 400.0, y1])
-            # ВУ и КБМ: рамка симметрична относительно центра звёзд -> текст по центру
             all_fields[f"driver{i+1}_license"] = (1, [lcx - 45.0, y0, lcx + 45.0, y1])
             all_fields[f"driver{i+1}_kbm"]     = (1, [kcx - 30.0, y0, kcx + 30.0, y1])
             data[f"driver{i+1}_fio"] = d.get("fio", "")
@@ -569,7 +569,6 @@ def fill_ingos_pdf(data):
 
                 for sp in spans: to_delete.append(sp["bbox"])
 
-            # ФИО водителя — СЛЕВА, остальные поля водителя — по центру
             is_center = (key in CENTER_FIELDS_INGOS) or (key.startswith("driver") and not key.endswith("_fio"))
             inserts.append((r, val, fname, fsize, is_center, fcolor))
 
@@ -606,32 +605,343 @@ def fill_ingos_pdf(data):
     return pdf_bytes
 
 # =========================================================================
+# РОСГОССТРАХ (НОВОЕ) — координаты из rgs_full.txt + rgs_cells.txt
+# =========================================================================
+MONTHS_RU = ["января","февраля","марта","апреля","мая","июня",
+             "июля","августа","сентября","октября","ноября","декабря"]
+
+# Клетки срока страхования (в каждой 2 цифры)
+RGS_TERM = {
+    "sd": [442.32, 129.68, 469.68, 143.36],
+    "sm": [479.28, 129.68, 506.64, 143.36],
+    "sy": [531.36, 129.68, 558.72, 143.36],
+    "ed": [442.32, 142.40, 469.68, 156.08],
+    "em": [479.28, 142.40, 506.64, 156.08],
+    "ey": [531.36, 142.40, 558.72, 156.08],
+}
+# Клетки 1-го периода использования (остальные периоды - прочерки, не трогаем)
+RGS_PERIOD = {
+    "sd": [32.16, 189.20, 59.52, 202.88],
+    "sm": [66.48, 189.20, 93.84, 202.88],
+    "sy": [113.28, 189.20, 140.64, 202.88],
+    "ed": [172.80, 189.20, 200.16, 202.88],
+    "em": [207.84, 189.20, 235.20, 202.88],
+    "ey": [252.00, 189.20, 279.36, 202.88],
+}
+
+RGS_TRAILER_YES = [266.16, 318.80, 279.60, 332.00]
+RGS_TRAILER_NO  = [303.84, 318.80, 317.04, 332.00]
+RGS_TYPE_BOX    = [413.04, 456.56, 458.88, 484.40]
+RGS_TYPE_DX     = 435.46   # центр галочки типа полиса
+RGS_TYPE_BASE   = 466.74   # базовая линия 1-й строки
+RGS_TYPE_STEP   = 11.28    # шаг между строками
+
+RGS_VIN_RECT = [200.0, 355.0, 440.0, 375.0]
+
+RGS_LABELS = {"tb":"ТБ","kt":"КТ","kbm":"КБМ","kvs":"КВС","ko":"КО",
+              "ks":"КС","kp":"КП","km":"КМ","premium_total":"Итого"}
+RGS_LABEL_FALLBACK = {"tb":49.8,"kt":108.0,"kbm":162.0,"kvs":216.0,"ko":265.6,
+                      "ks":315.0,"kp":367.2,"km":439.1,"premium_total":527.9}
+
+# 4 строки водителей: рамки колонок + точки привязки (по прочеркам бланка)
+RGS_DRIVER_ROWS = [
+    {"num":[22.0,506.5,30.0,519.5], "fio":[50.0,506.5,310.0,519.5],
+     "vu":[385.0,506.5,468.0,519.5], "kbm":[505.0,507.0,548.0,520.0],
+     "vu_cx":426.01, "kbm_cx":525.82, "num_cx":25.35},
+    {"num":[22.0,520.7,30.0,533.7], "fio":[50.0,520.7,310.0,533.7],
+     "vu":[385.0,520.7,468.0,533.7], "kbm":[505.0,523.0,548.0,536.1],
+     "vu_cx":426.01, "kbm_cx":526.29, "num_cx":25.35},
+    {"num":[22.0,536.8,30.0,549.8], "fio":[50.0,533.9,310.0,546.9],
+     "vu":[385.0,534.6,468.0,547.6], "kbm":[505.0,539.2,548.0,552.2],
+     "vu_cx":427.45, "kbm_cx":526.29, "num_cx":25.35},
+    {"num":[22.0,552.6,30.0,565.6], "fio":[50.0,551.9,310.0,564.9],
+     "vu":[385.0,551.6,468.0,564.7], "kbm":[505.0,555.2,548.0,568.3],
+     "vu_cx":426.25, "kbm_cx":526.29, "num_cx":25.35},
+]
+
+def rgs_font_name(font_str):
+    f = str(font_str).lower()
+    bold = ("bold" in f) or ("bd" in f)
+    ital = ("ita" in f) or ("oblique" in f)
+    if bold and ital: return "arbi"
+    if bold: return "arbd"
+    return "ar"
+
+def rgs_font_obj(fname):
+    if fname == "arbi": return ARBI_OBJ
+    if fname == "arbd": return ARBD_OBJ
+    return AR_OBJ
+
+def rgs_label_centers(page):
+    out = {}
+    try:
+        for w in page.get_text("words", clip=pymupdf.Rect(0, 660, 600, 684)):
+            out[w[4].strip()] = (w[0] + w[2]) / 2
+    except Exception:
+        pass
+    return out
+
+def rgs_coef(val):
+    try: return f"{float(str(val).replace(',', '.')):.2f}"
+    except Exception: return str(val).strip()
+
+def fill_rgs_pdf(data):
+    doc = pymupdf.open("template_rgs.pdf")
+    page = doc[0]
+
+    msk_now = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
+    today = msk_now.date()
+    try: next_year = today.replace(year=today.year + 1)
+    except ValueError: next_year = today.replace(year=today.year + 1, day=28)
+    end_date = next_year - datetime.timedelta(days=1)
+
+    rub = str(data.get("premium_total_thousands", "")).strip()
+    if not rub:
+        rub = str(data.get("premium_thousands", "")).strip() + str(data.get("premium_hundreds", "")).strip()
+    kop = str(data.get("premium_total_kop", "")).strip()
+    if not kop:
+        kop = str(data.get("premium_kop", "")).strip()
+    rub = "".join(c for c in rub if c.isdigit())
+    kop = ("".join(c for c in kop if c.isdigit()) or "0").zfill(2)[:2]
+
+    drivers = [d for d in data.get("drivers", []) if str(d.get("fio", "")).strip()]
+    limited = bool(drivers)
+
+    all_spans = get_all_spans(page)
+    to_delete, inserts = [], []
+    tasks = []
+
+    def put(rect, text, align="left", cx=None, max_w=None):
+        tasks.append({"rect": rect, "text": "" if text is None else str(text).strip(),
+                      "align": align, "cx": cx, "max_w": max_w})
+
+    def put_digits(rect, digits):
+        """Заменяет цифры в клетке, сохраняя их точные места."""
+        sps = [s for s in collect_spans(all_spans, rect) if s["text"].strip().isdigit()]
+        sps.sort(key=lambda s: s["bbox"][0])
+        for s in sps: to_delete.append(s["bbox"])
+        for i, ch in enumerate(str(digits)):
+            if i >= len(sps): break
+            s = sps[i]
+            x0, y0, x1, y1 = s["bbox"]
+            fn = rgs_font_name(s["font"]); fs = s["size"]; fc = int_to_rgb(s["color"])
+            w = rgs_font_obj(fn).text_length(ch, fontsize=fs)
+            base = s["origin"][1] if "origin" in s else y1 - 0.21 * fs
+            inserts.append(((x0 + x1) / 2 - w / 2, base, ch, fn, fs, fc))
+
+    def put_mark(box, symbol):
+        """Ставит галочку в центр нарисованной клетки."""
+        r = pymupdf.Rect(box)
+        for s in collect_spans(all_spans, r): to_delete.append(s["bbox"])
+        if not symbol: return
+        fs = 10.0
+        w = ARBD_OBJ.text_length(symbol, fontsize=fs)
+        inserts.append(((r.x0 + r.x1) / 2 - w / 2, r.y1 - 2.3, symbol, "arbd", fs, (0,0,0)))
+
+    # 1. Премия сверху (центр 513.63 = центр подписи "Страховая премия")
+    if rub:
+        put([460, 29.0, 567, 38.5], f"{rub} руб. {kop} коп.", align="center", cx=513.63, max_w=104)
+
+    # 2. Номер полиса (пусто в JSON -> оставляем шаблонный)
+    p_ser = str(data.get("policy_series", "")).strip()
+    p_num = str(data.get("policy_number", "")).strip()
+    if p_ser or p_num:
+        put([288, 47.5, 375, 60.5], f"{p_ser} {p_num}".strip(), max_w=85)
+
+    # 3. Срок страхования — по клеткам
+    put_digits(RGS_TERM["sd"], today.strftime("%d"))
+    put_digits(RGS_TERM["sm"], today.strftime("%m"))
+    put_digits(RGS_TERM["sy"], today.strftime("%y"))
+    put_digits(RGS_TERM["ed"], end_date.strftime("%d"))
+    put_digits(RGS_TERM["em"], end_date.strftime("%m"))
+    put_digits(RGS_TERM["ey"], end_date.strftime("%y"))
+
+    # 4. Период использования (1-й период) — по клеткам
+    put_digits(RGS_PERIOD["sd"], today.strftime("%d"))
+    put_digits(RGS_PERIOD["sm"], today.strftime("%m"))
+    put_digits(RGS_PERIOD["sy"], today.strftime("%y"))
+    put_digits(RGS_PERIOD["ed"], end_date.strftime("%d"))
+    put_digits(RGS_PERIOD["em"], end_date.strftime("%m"))
+    put_digits(RGS_PERIOD["ey"], end_date.strftime("%y"))
+
+    # 5. Страхователь и собственник
+    put([22, 244.5, 400, 257.0], data.get("policyholder_fio", ""), max_w=375)
+    put([22, 293.0, 400, 305.5], data.get("owner_fio", ""), max_w=375)
+
+    # 6. Прицеп
+    trailer_yes = str(data.get("trailer", "")).strip().lower() in ("да", "yes", "true", "1")
+    put_mark(RGS_TRAILER_YES, "V" if trailer_yes else "")
+    put_mark(RGS_TRAILER_NO, "" if trailer_yes else "V")
+
+    # 7. Марка + модель ОДНОЙ строкой
+    mm = f"{str(data.get('marka','')).strip()} {str(data.get('model','')).strip()}".strip()
+    put([22, 348.5, 195, 366.0], mm, max_w=170)
+
+    # 8. Госномер
+    put([448, 355.5, 570, 370.0], data.get("gosnomer", ""), max_w=120)
+
+    # 9. VIN — равномерная сетка по краям образца (клеток в бланке нет)
+    vin_val = "".join(str(data.get("vin", "")).split()).upper()
+    if vin_val:
+        vs = collect_spans(all_spans, RGS_VIN_RECT)
+        for s in vs: to_delete.append(s["bbox"])
+        if vs:
+            sp = sorted(vs, key=lambda s: -len(s["text"]))[0]
+            old = "".join(c for c in sp["text"] if c.isalnum())
+            x0, y0, x1, y1 = sp["bbox"]
+            fn = rgs_font_name(sp["font"]); fs = sp["size"]; fc = int_to_rgb(sp["color"])
+            fo = rgs_font_obj(fn)
+            base = sp["origin"][1] if "origin" in sp else y1 - 0.21 * fs
+            n = len(old)
+            if n > 1:
+                c0 = x0 + fo.text_length(old[0], fontsize=fs) / 2
+                cN = x1 - fo.text_length(old[-1], fontsize=fs) / 2
+                pitch = (cN - c0) / (n - 1)
+            else:
+                c0, pitch = x0 + 3.0, 13.9
+            for i, ch in enumerate(vin_val):
+                w = fo.text_length(ch, fontsize=fs)
+                inserts.append((c0 + i * pitch - w / 2, base, ch, fn, fs, fc))
+
+    # 10. Документ на ТС — 3 отдельных поля
+    put([80, 390.5, 110, 400.7], str(data.get("doc_type", "ПТС")).strip(), max_w=28)
+    put([366, 390.7, 410, 400.7], data.get("pts_series", ""), max_w=42)
+    put([441, 391.3, 500, 400.4], data.get("pts_number", ""), max_w=57)
+
+    # 11. Цель использования — в бланке уже стоит V у "личная", не трогаем
+
+    # 12. Тип полиса — галочка X в нужной строке
+    tmarks = collect_spans(all_spans, RGS_TYPE_BOX)
+    for s in tmarks: to_delete.append(s["bbox"])
+    tdx, tbase = RGS_TYPE_DX, RGS_TYPE_BASE
+    if tmarks:
+        s0 = tmarks[0]
+        tdx = (s0["bbox"][0] + s0["bbox"][2]) / 2
+        tbase = s0["origin"][1] if "origin" in s0 else s0["bbox"][3] - 2.1
+    if not limited:
+        w = ARBD_OBJ.text_length("X", fontsize=10.0)
+        inserts.append((tdx - w / 2, tbase, "X", "arbd", 10.0, (0,0,0)))
+    else:
+        w = ARBD_OBJ.text_length("X", fontsize=10.0)
+        inserts.append((tdx - w / 2, tbase + RGS_TYPE_STEP, "X", "arbd", 10.0, (0,0,0)))
+
+    # 13. Таблица водителей (4 строки): прочерки -> данные
+    if limited:
+        for i, d in enumerate(drivers[:4]):
+            row = RGS_DRIVER_ROWS[i]
+            try: kb = f"{float(d.get('kbm', '1.00')):.2f}"
+            except Exception: kb = "1.00"
+            put(row["num"], str(i + 1), align="center", cx=row["num_cx"], max_w=8)
+            put(row["fio"], d.get("fio", ""), max_w=255)
+            put(row["vu"], d.get("license", ""), align="center", cx=row["vu_cx"], max_w=80)
+            put(row["kbm"], kb, align="center", cx=row["kbm_cx"], max_w=40)
+
+    # 14. Коэффициенты + Итого (центры берём у подписей)
+    centers = rgs_label_centers(page)
+    for key, lab in RGS_LABELS.items():
+        cx = centers.get(lab, RGS_LABEL_FALLBACK[key])
+        half = 30 if key == "premium_total" else 25
+        if key == "premium_total":
+            val = f"{rub}.{kop}" if rub else ""
+        elif key == "tb":
+            val = str(data.get("tb", "")).strip()
+        else:
+            val = rgs_coef(data.get(key, "")) if str(data.get(key, "")).strip() else ""
+        if not val: continue
+        put([cx - half, 684.5, cx + half, 695.0], val, align="center", cx=cx, max_w=half * 2)
+
+    # 15. Даты внизу: день / месяц словом / последние 2 цифры года
+    mn = MONTHS_RU[today.month - 1]
+    put([146, 752.5, 164, 765.0], str(today.day), align="center", cx=154.98, max_w=17)
+    put([183, 751.5, 240, 765.0], mn, max_w=55)
+    put([263, 752.5, 280, 765.0], today.strftime("%y"), max_w=16)
+    put([145, 777.5, 163, 790.0], str(today.day), align="center", cx=154.02, max_w=17)
+    put([188, 776.0, 245, 790.0], mn, max_w=55)
+    put([266.5, 777.5, 283, 790.0], today.strftime("%y"), max_w=16)
+
+    # 16. Подпись, сертификат, страница 2 — НЕ ТРОГАЕМ
+
+    # ===== ИСПОЛНЕНИЕ =====
+    for t in tasks:
+        r = pymupdf.Rect(t["rect"])
+        spans = collect_spans(all_spans, r)
+        text = t["text"]
+
+        fname, fsize, fcolor = "ar", 10.0, (0,0,0)
+        left_x = r.x0
+        base = r.y1 - 0.21 * fsize
+        if spans:
+            ss = sorted(spans, key=lambda s: s["bbox"][0])
+            s0 = ss[0]
+            fname = rgs_font_name(s0["font"])
+            fsize = s0["size"]
+            fcolor = int_to_rgb(s0["color"])
+            left_x = s0["bbox"][0]
+            base = s0["origin"][1] if "origin" in s0 else s0["bbox"][3] - 0.21 * fsize
+            for s in spans: to_delete.append(s["bbox"])
+
+        if not text: continue
+
+        fo = rgs_font_obj(fname)
+        max_w = t["max_w"] or r.width
+        w = fo.text_length(text, fontsize=fsize)
+        if 0 < max_w < w:
+            fsize = max(4.0, fsize * max_w / w)
+            w = fo.text_length(text, fontsize=fsize)
+
+        if t["align"] == "center":
+            cx = t["cx"] if t["cx"] is not None else (r.x0 + r.x1) / 2
+            x = cx - w / 2
+        else:
+            x = left_x
+        inserts.append((x, base, text, fname, fsize, fcolor))
+
+    if to_delete:
+        for bb in to_delete: page.add_redact_annot(pymupdf.Rect(bb), fill=False)
+        page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE,
+                              graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
+
+    page.insert_font(fontname="ar", fontbuffer=AR_BUF)
+    page.insert_font(fontname="arbd", fontbuffer=ARBD_BUF)
+    page.insert_font(fontname="arbi", fontbuffer=ARBI_BUF)
+
+    for x, b, text, fn, fs, fc in inserts:
+        page.insert_text((x, b), text, fontname=fn, fontsize=fs, color=fc)
+
+    pdf_bytes = doc.tobytes(garbage=4, deflate=True)
+    doc.close()
+    gc.collect()
+    return pdf_bytes
+
+# =========================================================================
 # ИНТЕРФЕЙС
 # =========================================================================
+COMPANY_BUTTONS = {
+    "🔴 АльфаСтрахование": ("alfa", "АльфаСтрахование"),
+    "🔵 Ингосстрах": ("ingo", "Ингосстрах"),
+    "🟢 Росгосстрах": ("rgs", "Росгосстрах"),
+}
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    btn_alfa = types.KeyboardButton("🔴 АльфаСтрахование")
-    btn_ingo = types.KeyboardButton("🔵 Ингосстрах")
-    markup.add(btn_alfa, btn_ingo)
+    markup.add(types.KeyboardButton("🔴 АльфаСтрахование"), types.KeyboardButton("🔵 Ингосстрах"))
+    markup.add(types.KeyboardButton("🟢 Росгосстрах"))
     bot.send_message(message.chat.id, "👋 Привет! Выбери страховую компанию на клавиатуре внизу:", reply_markup=markup)
 
-@bot.message_handler(func=lambda message: message.text in ["🔴 АльфаСтрахование", "🔵 Ингосстрах"])
+@bot.message_handler(func=lambda message: message.text in COMPANY_BUTTONS)
 def handle_company_choice(message):
-    if "Альфа" in message.text:
-        user_choices[message.from_user.id] = "alfa"
-        bot.reply_to(message, "✅ Выбрано: *АльфаСтрахование*.\n\nТеперь пришли мне JSON с данными.", parse_mode='Markdown')
-    else:
-        user_choices[message.from_user.id] = "ingo"
-        bot.reply_to(message, "✅ Выбрано: *Ингосстрах*.\n\nТеперь пришли мне JSON с данными.", parse_mode='Markdown')
+    key, name = COMPANY_BUTTONS[message.text]
+    user_choices[message.from_user.id] = key
+    bot.reply_to(message, f"✅ Выбрано: *{name}*.\n\nТеперь пришли мне JSON с данными.", parse_mode='Markdown')
 
 @bot.message_handler(content_types=['text'])
 def handle_json(message):
-    if message.text in ["🔴 АльфаСтрахование", "🔵 Ингосстрах"]:
+    if message.text in COMPANY_BUTTONS:
         return
 
     insurer_key = user_choices.get(message.from_user.id, "alfa")
-    insurer_name = "АльфаСтрахование" if insurer_key == "alfa" else "Ингосстрах"
+    insurer_name = {"alfa": "АльфаСтрахование", "ingo": "Ингосстрах", "rgs": "Росгосстрах"}.get(insurer_key, "АльфаСтрахование")
     raw_text = message.text.strip().replace("```json", "").replace("```", "").strip()
 
     if not raw_text.startswith("{"):
@@ -659,6 +969,10 @@ def handle_json(message):
             else:
                 bot.reply_to(message, f"📄 {insurer_name}. Водителей: 0. Тип: Неограниченный. ⏳ Генерирую...")
                 pdf_data = fill_alfa_pdf(data)
+        elif insurer_key == "rgs":
+            tipo = "Ограниченный" if drivers else "Неограниченный"
+            bot.reply_to(message, f"📄 {insurer_name}. Водителей: {len(drivers)}. Тип: {tipo}. ⏳ Генерирую...")
+            pdf_data = fill_rgs_pdf(data)
         else:
             bot.reply_to(message, f"📄 {insurer_name}. ⏳ Генерирую...")
             pdf_data = fill_ingos_pdf(data)
