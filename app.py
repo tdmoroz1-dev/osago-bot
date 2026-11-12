@@ -982,15 +982,112 @@ def handle_json(message):
         traceback.print_exc()
         bot.reply_to(message, f"❌ Ошибка: {e}")
 
+# =========================================================================
+# СЕРВЕР + САМОВОССТАНОВЛЕНИЕ БОТА
+# =========================================================================
+import time
+from telebot import apihelper
+
+# чтобы зависшее соединение с Telegram не висело вечно
+try:
+    apihelper.READ_TIMEOUT = 30
+    apihelper.CONNECT_TIMEOUT = 15
+except Exception:
+    pass
+
+_bot_thread = None
+_bot_lock = threading.Lock()
+_state = {"api_ok": time.time(), "api_fails": 0, "restarts": 0, "started": time.time()}
+
+
+def _poll_forever():
+    """Если polling упал — поднимаем заново, бесконечно."""
+    while True:
+        try:
+            try:
+                bot.remove_webhook()
+            except Exception:
+                pass
+            print("Polling: запуск")
+            try:
+                bot.infinity_polling(timeout=20, long_polling_timeout=20)
+            except TypeError:
+                bot.polling(none_stop=True, timeout=20)
+        except Exception as e:
+            print("Polling упал:", repr(e))
+            traceback.print_exc()
+        try:
+            bot.stop_polling()
+        except Exception:
+            pass
+        _state["restarts"] += 1
+        print("Polling остановлен. Перезапуск через 5 сек...")
+        time.sleep(5)
+
+
+def ensure_bot_alive():
+    """Поднимает поток бота, если он мёртв."""
+    global _bot_thread
+    with _bot_lock:
+        if _bot_thread is None or not _bot_thread.is_alive():
+            _bot_thread = threading.Thread(target=_poll_forever, daemon=True, name="bot-polling")
+            _bot_thread.start()
+            return True
+    return False
+
+
+def _watchdog():
+    """Раз в минуту проверяет поток, раз в 5 минут — связь с Telegram."""
+    tick = 0
+    while True:
+        time.sleep(60)
+        tick += 1
+        try:
+            if ensure_bot_alive():
+                print("WATCHDOG: поток бота был мёртв — поднят")
+            if tick % 5 == 0:
+                try:
+                    bot.get_me()
+                    _state["api_ok"] = time.time()
+                    _state["api_fails"] = 0
+                except Exception as e:
+                    _state["api_fails"] += 1
+                    print("WATCHDOG: нет связи с Telegram:", repr(e))
+                    if _state["api_fails"] >= 3:
+                        print("WATCHDOG: принудительный перезапуск polling")
+                        try:
+                            bot.stop_polling()
+                        except Exception:
+                            pass
+                        _state["api_fails"] = 0
+        except Exception:
+            traceback.print_exc()
+
+
 @app.route('/')
 def home():
-    return "Bot is running!"
+    # Пинг UptimeRobot теперь ещё и ЛЕЧИТ бота каждые 5 минут
+    healed = ensure_bot_alive()
+    return ("Bot restarted by watchdog" if healed else "Bot is running!"), 200
 
-def run_bot():
-    print("Бот запущен и ждет сообщений...")
-    bot.polling(none_stop=True)
+
+@app.route('/health')
+def health():
+    alive = _bot_thread is not None and _bot_thread.is_alive()
+    fresh = (time.time() - _state["api_ok"]) < 900
+    info = {
+        "polling_alive": alive,
+        "api_ok_ago_sec": int(time.time() - _state["api_ok"]),
+        "restarts": _state["restarts"],
+        "uptime_sec": int(time.time() - _state["started"]),
+    }
+    return (json.dumps(info), 200 if (alive and fresh) else 503,
+            {"Content-Type": "application/json"})
+
 
 if __name__ == '__main__':
-    threading.Thread(target=run_bot, daemon=True).start()
+    ensure_bot_alive()
+    threading.Thread(target=_watchdog, daemon=True, name="bot-watchdog").start()
+    print("Бот запущен, watchdog активен.")
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
